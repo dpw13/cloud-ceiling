@@ -1,1 +1,2 @@
-ctx.addClock("clk", 100)
+ctx.addClock("clk_100", 100)
+ctx.addClock("gpmc_clk", 25)

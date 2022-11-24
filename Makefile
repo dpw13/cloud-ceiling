@@ -3,8 +3,10 @@ BUILD = ./out
 DEVICE = hx4k
 FOOTPRNT = tq144
 
+BW_BASE = /home/dwagner/Documents/git/BeagleWire
+
 SRC = top.v
-SRC +=
+SRC += gpmc-sync.v
 TOP_SRC = top
 PIN_SRC = physical.pcf
 PREPACK_PY = timing.py
@@ -21,7 +23,7 @@ ${BUILD}/${PROJ}.synth.json : ${SRC}
 	@ yosys -q -p "synth_ice40 -top ${TOP_SRC} -json $(BUILD)/$(PROJ).synth.json" $(SRC)
 	@ echo " Done"
 
-${BUILD}/${PROJ}.asc : ${BUILD}/${PROJ}.synth.json
+${BUILD}/${PROJ}.asc : ${BUILD}/${PROJ}.synth.json ${PIN_SRC} ${PREPACK_PY}
 	@ echo -n "Place & Route ... "
 	@ nextpnr-ice40 -q --top ${TOP_SRC} --$(DEVICE) --package $(FOOTPRNT) --pre-pack ${PREPACK_PY} --pcf $(PIN_SRC) --asc $(BUILD)/$(PROJ).asc --json $(BUILD)/$(PROJ).synth.json --report ${BUILD}/${PROJ}.rpt.json
 	@ echo " Done"
