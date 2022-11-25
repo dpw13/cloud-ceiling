@@ -20,10 +20,10 @@ Q = @
 
 all: $(BUILD)/$(PROJ).bin
 
-${BUILD}/${PROJ}.synth.json : ${SRC}
+${BUILD}/${PROJ}.synth.json : ${SRC} ${PROJ_FILE}
 	@ echo -n "Synthesis ... "
 	@ mkdir -p $(BUILD)
-	@ yosys -q -m ghdl -s ${PROJ_FILE}
+	@ yosys -m ghdl -s ${PROJ_FILE}
 	@ echo " Done"
 
 ${BUILD}/${PROJ}.asc : ${BUILD}/${PROJ}.synth.json ${PIN_SRC} ${PREPACK_PY}

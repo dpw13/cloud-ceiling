@@ -23,9 +23,9 @@ library ieee;
 entity FifoCounterHalf is
   generic (
     --* The width of the physical RAM address pointer
-    kAddrWidth : natural;
+    kAddrWidth : natural := 16;
     --* True if this side implements the write pointer, false otherwise
-    kWrSide : boolean);
+    kWrSide : boolean := false);
   port (
     --* The local clock. All c* signals are synchronous to Clk
     Clk : in std_logic;
@@ -55,8 +55,15 @@ architecture arch of FifoCounterHalf is
 
   signal rReady: boolean;
 
-  constant kTopAddrBit : std_logic_vector(kAddrWidth downto 0)
-    := (kAddrWidth => '1', others => '0');
+  function SetTopBit(Width : integer)
+  return std_logic_vector is
+    variable Vector: std_logic_vector(Width-1 downto 0) := (others => '0');
+  begin
+    Vector(Width-1) := '1';
+    return Vector;
+  end function;
+
+  constant kTopAddrBit : std_logic_vector(kAddrWidth downto 0) := SetTopBit(kAddrWidth+1);
 
 begin
 
