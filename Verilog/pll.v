@@ -11,6 +11,7 @@
  */
 
 module pll(
+	input  reset_n,
 	input  clock_in,
 	output clock_out,
 	output locked
@@ -24,7 +25,7 @@ SB_PLL40_CORE #(
 		.FILTER_RANGE(3'b010)	// FILTER_RANGE = 2
 	) uut (
 		.LOCK(locked),
-		.RESETB(1'b1),
+		.RESETB(reset_n),
 		.BYPASS(1'b0),
 		.REFERENCECLK(clock_in),
 		.PLLOUTCORE(clock_out)

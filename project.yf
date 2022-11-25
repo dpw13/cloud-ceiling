@@ -1,8 +1,3 @@
-read_verilog Verilog/pll.v
-read_verilog Verilog/gpmc-sync.v
-read_verilog Verilog/string_driver.v
-read_verilog Verilog/top.v
-
 ghdl --no-formal \
     VHDL/Packages/PkgUtils.vhd \
     VHDL/ClockXing/EventXing.vhd \
@@ -12,6 +7,14 @@ ghdl --no-formal \
     VHDL/Fifo/DpParityRam.vhd \
     VHDL/Fifo/SimpleFifo.vhd \
     VHDL/Fifo/RedundantFifo.vhd -e SimpleFifo
+
+# For simulation
+write_verilog out/SimpleFifo.v
+
+read_verilog Verilog/pll.v
+read_verilog Verilog/gpmc_sync.v
+read_verilog Verilog/string_driver.v
+read_verilog Verilog/top.v
 
 synth_ice40 -top top
 write_json out/blink.synth.json

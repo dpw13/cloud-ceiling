@@ -1,5 +1,7 @@
 module top(
 	input clk_100,
+	input reset_n,
+
 	output [3:0] led,
 
 	// GPMC INTERFACE
@@ -17,17 +19,53 @@ module top(
 	localparam GPMC_ADDR_WIDTH = 16;
 	localparam GPMC_DATA_WIDTH = 16;
 	localparam COUNTER_WIDTH = 28;
-	localparam FIFO_ADDR_WIDTH = 16;
+	localparam FIFO_ADDR_WIDTH = 12;
+	localparam FIFO_DATA_WIDTH = 16;
 
 	wire clk_20;
 	wire pll_locked;
 
 	pll system_pll (
+		.reset_n(reset_n),
 		.clock_in(clk_100),
 		.clock_out(clk_20),
 		.locked(pll_locked)
 	);
 
+	reg reset_ms_100 = 1'b1;
+	reg reset_100 = 1'b1;
+	always @(posedge clk_100)
+	begin
+		// Double-sync reset onto clk_100
+		reset_ms_100 <= !reset_n;
+		reset_100 <= reset_ms_100;
+	end
+
+	reg reset_ms_20 = 1'b1;
+	reg reset_20 = 1'b1;
+	always @(posedge clk_20)
+	begin
+		// Double-sync reset onto clk_20
+		// Note that this isn't really safe because the combinatorial input to the metastable flop.
+		reset_ms_20 <= pll_locked && !reset_n;
+		reset_20 <= reset_ms_20;
+	end
+
+	reg gpmc_reset_ms = 1'b1;
+	reg gpmc_reset = 1'b1;
+	always @(posedge gpmc_clk)
+	begin
+		// Double-sync reset onto gpmc_clk
+		gpmc_reset_ms <= !reset_n;
+		gpmc_reset <= gpmc_reset_ms;
+	end
+
+	wire gpmc_address_valid;
+	wire gpmc_rd_en;
+	wire gpmc_wr_en;
+	wire [GPMC_ADDR_WIDTH-1:0] gpmc_address;
+	wire [GPMC_DATA_WIDTH-1:0] gpmc_data_in;
+	wire [GPMC_DATA_WIDTH-1:0] gpmc_data_out;
 
 	reg [27:0] counter = 0;
 	always @(posedge clk_100)
@@ -41,13 +79,6 @@ module top(
 	end
 
 	assign led[3:0] = counter[COUNTER_WIDTH-1:COUNTER_WIDTH-4];
-
-	wire gpmc_address_valid;
-	wire gpmc_rd_en;
-	wire gpmc_wr_en;
-	wire [GPMC_ADDR_WIDTH-1:0] gpmc_address;
-	wire [GPMC_DATA_WIDTH-1:0] gpmc_data_in;
-	wire [GPMC_DATA_WIDTH-1:0] gpmc_data_out;
 
 	gpmc_sync # (
 		.ADDR_WIDTH(GPMC_ADDR_WIDTH),
@@ -72,12 +103,10 @@ module top(
 
 	assign gpmc_data_in = 0;
 
-	reg gpmc_fifo_reset = 1'b1;
 	reg gpmc_fifo_write = 1'b0;
 
 	always @(posedge gpmc_clk)
 	begin
-		gpmc_fifo_reset <= 1'b0;
 		gpmc_fifo_write <= 1'b0;
 
 		if (gpmc_wr_en && gpmc_address == 0) begin
@@ -86,12 +115,12 @@ module top(
 	end
 
 	wire        pxl_fifo_read;
-	wire [FIFO_ADDR_WIDTH:0] pxl_fifo_full_count; // Full count is one bit wider than kAddrWidth
-	wire  [7:0] pxl_fifo_data;
+	wire [FIFO_ADDR_WIDTH:0]   pxl_fifo_full_count; // Full count is one bit wider than kAddrWidth
+	wire [FIFO_DATA_WIDTH-1:0] pxl_fifo_data;
 	wire        pxl_fifo_data_valid;
 	wire [23:0] pxl_data;
 
-	assign pxl_data = pxl_fifo_data & pxl_fifo_data & pxl_fifo_data;
+	assign pxl_data = { pxl_fifo_data[7:0], pxl_fifo_data};
 
 	/*
 	 * Current problems:
@@ -109,20 +138,20 @@ module top(
 		//.kAddrWidth(12)
 	) pixel_fifo (
 		.IClk(gpmc_clk),
-		.iReset(gpmc_fifo_reset),
+		.iReset(gpmc_reset),
 		.iData(gpmc_data_out),
 		.iWr(gpmc_fifo_write),
-		// .iEmptyCount(),
-		// .iOverflow(),
+		.iEmptyCount(),
+		.iOverflow(),
 
 		.OClk(clk_20),
-		.oReset(1'b0),
-		.oData(pxl_data),
+		.oReset(reset_20),
+		.oData(pxl_fifo_data),
 		.oDataValid(pxl_fifo_data_valid),
-		// .oDataErr()
+		.oDataErr(),
 		.oRd(pxl_fifo_read),
-		.oFullCount(pxl_fifo_full_count)
-		// .oUnderflow()
+		.oFullCount(pxl_fifo_full_count),
+		.oUnderflow()
 	);
 
 	wire pxl_string_ready;
@@ -132,7 +161,7 @@ module top(
 		.CLK_PERIOD_NS(50)
 	) string_driverx (
 		.clk(clk_20),
-		.pixel_data(pxl_fifo_data),
+		.pixel_data(pxl_data),
 		.pixel_data_valid(pxl_fifo_data_valid),
 		.h_blank(gpmc_rd_en),
 		.sdi(led_sdi[0]),

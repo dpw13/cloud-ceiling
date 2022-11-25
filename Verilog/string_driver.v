@@ -3,7 +3,7 @@
  */
 
 module string_driver (input clk,
-                  
+
                       input [23:0] pixel_data,
                       input        pixel_data_valid,
                       input        h_blank,
