@@ -9,6 +9,9 @@ module top(
 	input         gpmc_wein,
 	input         gpmc_oen,
 	input         gpmc_clk,
+
+	// LED string interface
+	output [1:0]  led_sdi
 );
 
 	localparam GPMC_ADDR_WIDTH = 16;
@@ -58,4 +61,13 @@ module top(
 
 	assign gpmc_data_in = 0;
 
+	string_driver string_driverx (
+		.clk(clk_100),
+		.pixel_data(24'habcdef),
+		.pixel_data_valid(gpmc_wr_en),
+		.h_blank(gpmc_rd_en),
+		.sdi(led_sdi[0]),
+	);
+
+	assign led_sdi[1] = 0;
 endmodule

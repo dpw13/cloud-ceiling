@@ -7,6 +7,7 @@ BW_BASE = /home/dwagner/Documents/git/BeagleWire
 
 SRC = top.v
 SRC += gpmc-sync.v
+SRC += string_driver.v
 TOP_SRC = top
 PIN_SRC = physical.pcf
 PREPACK_PY = timing.py
