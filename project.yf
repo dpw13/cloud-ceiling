@@ -1,8 +1,9 @@
-read_verilog Verilog/top.v
+read_verilog Verilog/pll.v
 read_verilog Verilog/gpmc-sync.v
 read_verilog Verilog/string_driver.v
+read_verilog Verilog/top.v
 
-ghdl \
+ghdl --no-formal \
     VHDL/Packages/PkgUtils.vhd \
     VHDL/ClockXing/EventXing.vhd \
     VHDL/ClockXing/VectorXing.vhd \

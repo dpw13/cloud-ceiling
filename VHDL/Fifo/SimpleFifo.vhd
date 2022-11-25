@@ -13,10 +13,10 @@ entity SimpleFifo is
   generic (
     --* The read latency of the FIFO
     kLatency : in natural range 1 to 2 := 2;
-    --* The width of the data inputs and outputs
-    kDataWidth : in natural := 16;
     --* Log base 2 of the FIFO depth
-    kAddrWidth : in natural := 8
+    kAddrWidth : in natural := 16;
+    --* The width of the data inputs and outputs
+    kDataWidth : in natural := 8
     );
   port (
     --* The write clock. All i* signals are sychronous to IClk
