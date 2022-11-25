@@ -5,10 +5,12 @@ FOOTPRNT = tq144
 
 BW_BASE = /home/dwagner/Documents/git/BeagleWire
 
-SRC = top.v
-SRC += gpmc-sync.v
-SRC += string_driver.v
+SRC = Verilog/top.v
+SRC += Verilog/gpmc-sync.v
+SRC += Verilog/string_driver.v
 TOP_SRC = top
+
+PROJ_FILE = project.yf
 PIN_SRC = physical.pcf
 PREPACK_PY = timing.py
 
@@ -21,7 +23,7 @@ all: $(BUILD)/$(PROJ).bin
 ${BUILD}/${PROJ}.synth.json : ${SRC}
 	@ echo -n "Synthesis ... "
 	@ mkdir -p $(BUILD)
-	@ yosys -q -p "synth_ice40 -top ${TOP_SRC} -json $(BUILD)/$(PROJ).synth.json" $(SRC)
+	@ yosys -q -m ghdl -s ${PROJ_FILE}
 	@ echo " Done"
 
 ${BUILD}/${PROJ}.asc : ${BUILD}/${PROJ}.synth.json ${PIN_SRC} ${PREPACK_PY}

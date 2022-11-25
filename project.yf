@@ -1,0 +1,14 @@
+read_verilog Verilog/top.v
+read_verilog Verilog/gpmc-sync.v
+read_verilog Verilog/string_driver.v
+
+#ghdl VHDL/ClockXing/EventXing.vhd -e EventXing
+#ghdl VHDL/ClockXing/VectorXing.vhd -e VectorXing
+#ghdl VHDL/Fifo/FifoCounterHalf.vhd -e FifoCounterHalf
+#ghdl VHDL/Fifo/DpRam.vhd -e DpRam
+#ghdl VHDL/Fifo/DpParityRam.vhd -e DpParityRam
+#ghdl VHDL/Fifo/SimpleFifo.vhd -e SimpleFifo
+#ghdl VHDL/Fifo/RedundantFifo.vhd -e RedundantFifo
+
+synth_ice40 -top top
+write_json out/blink.synth.json
