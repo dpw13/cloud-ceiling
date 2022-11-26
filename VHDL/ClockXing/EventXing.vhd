@@ -32,7 +32,7 @@ end entity ; -- EventXing
 
 architecture arch of EventXing is
 
-	signal iReadyLcl : boolean;
+	signal iReadyLcl : boolean := false;
 
 	signal iLclToggle : boolean := false;
 	signal iFarToggleMeta, iFarToggle : boolean := false;

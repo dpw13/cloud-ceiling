@@ -37,10 +37,10 @@ end entity ; -- VectorXing
 
 architecture arch of VectorXing is
 
-  signal iReadyLcl: boolean;
-  signal oEvent: boolean;
+  signal iReadyLcl: boolean := false;
+  signal oEvent: boolean := false;
 
-  signal iDataQ : std_logic_vector(kDataWidth-1 downto 0);
+  signal iDataQ : std_logic_vector(kDataWidth-1 downto 0) := (others => '0');
 
 begin
 

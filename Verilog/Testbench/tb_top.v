@@ -71,6 +71,11 @@ initial begin
     // PLL reset must be at least 1 us
     #1005;
     reset_n <= 1'b1;
+    // Run GPMC clock to allow synchronous resets to clear
+    #100;
+    gpmc_clk_en <= 1'b1;
+    #100;
+    gpmc_clk_en <= 1'b0;
     // It takes about another 7 us for the PLL to lock
     #7000;
 
@@ -94,10 +99,12 @@ initial begin
         gpmc_advn <= 1'b1;
 
         @(negedge gpmc_clk);
-        gpmc_clk_en <= 1'b0;
         // Docs indicate that CS_n can rise after last clock pulse
         gpmc_ad_out <= 16'hXXXX;
         gpmc_csn1 <= 1'b1;
+
+        @(negedge gpmc_clk);
+        gpmc_clk_en <= 1'b0;
     end
 
     #5000;

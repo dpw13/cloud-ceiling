@@ -31,17 +31,18 @@ function integer get_count(input integer bit_period, clk_period);
     get_count = (bit_period + clk_period - 1)/clk_period;
 endfunction
 
-localparam kT0H_Count = get_count(kT0H_ns, CLK_PERIOD_NS);
-localparam kT1H_Count = get_count(kT0H_ns, CLK_PERIOD_NS);
-localparam kT0L_Count = get_count(kT0H_ns, CLK_PERIOD_NS);
-localparam kT1L_Count = get_count(kT0H_ns, CLK_PERIOD_NS);
+// 2 extra cycles of latency due to state machine construction.
+localparam kT0H_Count = get_count(kT0H_ns, CLK_PERIOD_NS) - 2;
+localparam kT1H_Count = get_count(kT1H_ns, CLK_PERIOD_NS) - 2;
+localparam kT0L_Count = get_count(kT0L_ns, CLK_PERIOD_NS) - 2;
+localparam kT1L_Count = get_count(kT1L_ns, CLK_PERIOD_NS) - 2;
 
 localparam kHBlankCount = get_count(kBlank_ns, CLK_PERIOD_NS);
 
 reg [23:0] shift_reg = 0;
 reg        shift_done = 1'b0;
 reg        shift_start = 1'b0;
-reg        shift_ready = 1'b0;
+reg        shift_ready = 1'b1;
 reg  [4:0] bit_count = 0;
 
 always @ (posedge clk)
@@ -55,7 +56,7 @@ begin
         shift_start <= 1'b1;
     end else if (shift_done) begin
         // MSB sent first, shift up
-        shift_reg <= shift_reg[23:1] & 1'b0;
+        shift_reg <= { shift_reg[22:0], 1'b0 };
 
         if (bit_count > 0) begin
             bit_count <= bit_count - 1;

@@ -49,9 +49,9 @@ end entity ; -- FifoCounterHalf
 
 architecture arch of FifoCounterHalf is
 
-  signal cCountLcl: unsigned(kAddrWidth downto 0);
+  signal cCountLcl: unsigned(kAddrWidth downto 0) := (others => '0');
   signal cAddrLcl, cRemAddr: unsigned(kAddrWidth downto 0) := (others => '0');
-  signal cRemAddrSlv: std_logic_vector(kAddrWidth downto 0);
+  signal cRemAddrSlv: std_logic_vector(kAddrWidth downto 0) := (others => '0');
 
   signal rReady: boolean;
 

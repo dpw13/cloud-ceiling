@@ -47,7 +47,7 @@ module top(
 	begin
 		// Double-sync reset onto clk_20
 		// Note that this isn't really safe because the combinatorial input to the metastable flop.
-		reset_ms_20 <= pll_locked && !reset_n;
+		reset_ms_20 <= ~pll_locked || !reset_n;
 		reset_20 <= reset_ms_20;
 	end
 
@@ -103,18 +103,10 @@ module top(
 
 	assign gpmc_data_in = 0;
 
-	reg gpmc_fifo_write = 1'b0;
+	wire gpmc_fifo_write;
+	assign gpmc_fifo_write = (gpmc_wr_en && gpmc_address == 0);
 
-	always @(posedge gpmc_clk)
-	begin
-		gpmc_fifo_write <= 1'b0;
-
-		if (gpmc_wr_en && gpmc_address == 0) begin
-			gpmc_fifo_write <= 1'b1;
-		end
-	end
-
-	wire        pxl_fifo_read;
+	reg         pxl_fifo_read = 1'b0;
 	wire [FIFO_ADDR_WIDTH:0]   pxl_fifo_full_count; // Full count is one bit wider than kAddrWidth
 	wire [FIFO_DATA_WIDTH-1:0] pxl_fifo_data;
 	wire        pxl_fifo_data_valid;
@@ -155,7 +147,17 @@ module top(
 	);
 
 	wire pxl_string_ready;
-	assign pxl_fifo_read = pxl_fifo_full_count > 0 && pxl_string_ready;
+
+	// TODO: The ready signal above isn't responsive enough. We end up popping multiple elements off
+	// the FIFO before the first word is shifted out.
+	always @(posedge clk_20)
+	begin
+		if (reset_20) begin
+			pxl_fifo_read <= 1'b0;
+		end else begin
+			pxl_fifo_read <= pxl_fifo_full_count > 1 && pxl_string_ready;
+		end
+	end
 
 	string_driver #(
 		.CLK_PERIOD_NS(50)
