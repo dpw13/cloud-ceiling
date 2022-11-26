@@ -97,7 +97,7 @@ begin
     rd_en_lcl <= 1'b0;
     wr_en_lcl <= 1'b0;
     // CS active
-    if (address_valid_lcl) begin
+    if (address_valid_lcl && gpmc_adv_n) begin
         // Data phase
         data_out_lcl <= gpmc_ad_in;
         wr_en_lcl <= ~gpmc_we_n;

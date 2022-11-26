@@ -7,7 +7,7 @@
 module tb_top ();
 
 parameter PERIOD_100 = 5; // 100 MHz
-parameter PERIOD_FCLK = 2; // 250 MHz
+parameter PERIOD_FCLK = 5; // also 100 MHz
 
 reg reset_n;
 reg clk_100;
@@ -67,6 +67,40 @@ initial begin
     gpmc_csn1 <= 1'b1;
     gpmc_oen <= 1'b1;
     gpmc_clk <= 1'b0;
+
+    /*
+     * Timings from BW-ICE40CapeV2-01-00A0.dts in BeagleWire repo
+     *
+     * Clock period: 20 ns (50 MHz)
+     *
+     * I believe the following timings are relative to the start of the transfer
+     *
+     * CS assertion time: 0 ns
+     * CS deassertion for reads: 100 ns
+     * CS deassertion for writes: 40 ns
+     *
+     * ADV_n assertion time: 0 ns
+     * ADV_n deassertion for reads: 20 ns
+     * ADV_n deassertion for writes: 20 ns
+     *
+     * WE_n assertion time: 20 ns
+     * WE_n deassertion time: 40 ns
+     *
+     * OE assertion time: 20 ns
+     * OE deassertion time: 100 ns
+     *
+     * "Multiple access word delay": 20 ns (cycles per word?) 
+     * Data valid at: 80 ns (access-ns)
+     * Total read cycle time: 120 ns
+     * Total write cycle time: 60 ns
+     *
+     * Write access time (data captured at): 40 ns
+     * Write data on muxed AD bus at: 20 ns
+     *
+     * Bus turnaround time: 0 ns (default)
+     * Note that I think this means we can have back-to-back accesses without CS deasserting.
+     * This needs to be handled by the RTL, but should be doable because ADV_n will reassert.
+     */
 
     // PLL reset must be at least 1 us
     #1005;
