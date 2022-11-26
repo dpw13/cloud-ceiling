@@ -77,11 +77,10 @@ SB_IO # (
 always @ (posedge gpmc_clk or posedge gpmc_cs_n)
 begin
     if (gpmc_cs_n) begin
-        // CS inactive
-        addr_lcl <= 0;
+        // CS deasserted
         address_valid_lcl <= 1'b0;
     end else begin
-        // CS active
+        // CS asserted
         if (gpmc_adv_n == 1'b0) begin
             // Address phase
             addr_lcl <= gpmc_ad_in;
@@ -96,8 +95,7 @@ begin
     // GPMC transaction on the wire.
     rd_en_lcl <= 1'b0;
     wr_en_lcl <= 1'b0;
-    // CS active
-    if (address_valid_lcl && gpmc_adv_n) begin
+    if (~gpmc_cs_n && address_valid_lcl && gpmc_adv_n) begin
         // Data phase
         data_out_lcl <= gpmc_ad_in;
         wr_en_lcl <= ~gpmc_we_n;

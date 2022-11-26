@@ -64,7 +64,7 @@ module top(
 	wire gpmc_rd_en;
 	wire gpmc_wr_en;
 	wire [GPMC_ADDR_WIDTH-1:0] gpmc_address;
-	wire [GPMC_DATA_WIDTH-1:0] gpmc_data_in;
+	reg  [GPMC_DATA_WIDTH-1:0] gpmc_data_in;
 	wire [GPMC_DATA_WIDTH-1:0] gpmc_data_out;
 
 	reg [27:0] counter = 0;
@@ -101,10 +101,39 @@ module top(
 		.data_in(gpmc_data_in)
 	);
 
-	assign gpmc_data_in = 0;
+	reg [15:0] basic_data_out = 16'h1234;
+	reg [15:0] scratch = 16'h1234;
+
+	always @(posedge gpmc_clk)
+	begin
+		// Basic info regs
+
+		// Read registers
+		basic_data_out <= 16'h0000;
+		if (gpmc_address_valid) begin
+			if (gpmc_address == 16'h0) begin
+				// ID register
+				basic_data_out <= 16'hC10D;
+			end else if (gpmc_address == 16'h2) begin
+				basic_data_out <= scratch;
+			end
+		end
+
+		// Write registers
+		if (gpmc_wr_en) begin
+			if (gpmc_address == 16'h2) begin
+				scratch <= gpmc_data_out;
+			end
+		end
+	end
+
+	// OR together all data outputs
+	always @(posedge gpmc_clk) begin
+		gpmc_data_in <= basic_data_out;
+	end
 
 	wire gpmc_fifo_write;
-	assign gpmc_fifo_write = (gpmc_wr_en && gpmc_address == 0);
+	assign gpmc_fifo_write = (gpmc_wr_en && gpmc_address == 16'h4000);
 
 	reg         pxl_fifo_read = 1'b0;
 	wire [FIFO_ADDR_WIDTH:0]   pxl_fifo_full_count; // Full count is one bit wider than kAddrWidth
@@ -114,16 +143,6 @@ module top(
 
 	assign pxl_data = { pxl_fifo_data[7:0], pxl_fifo_data};
 
-	/*
-	 * Current problems:
-	 *
-	 * 1. GHDL synthesizes the top level it knows about, in this case SimpleFifo. That apparently
-	 *    means that generics get optimized away, so to change the parameters here we have to update
-	 *    the defaults in the VHDL.
-	 *
-	 * 2. GHDL or yosys aren't preserving the RAM, so there's no underlying storage in the final
-	 *    bitfile...
-	 */
 	SimpleFifo # (
 		//.kLatency(2),
 		//.kDataWidth(8),
@@ -167,7 +186,7 @@ module top(
 		.pixel_data(pxl_data),
 		.pixel_fifo_rd(pxl_fifo_read),
 		.pixel_data_valid(pxl_fifo_data_valid),
-		.h_blank(gpmc_rd_en),
+		.h_blank(1'b0),
 		.sdi(led_sdi[0]),
 		.string_ready(pxl_string_ready)
 	);

@@ -71,6 +71,9 @@ sim:
 vsim:
 	cd modelsim && vsim -modelsimini modelsim.mpf -t ns ${TOP_TB_ENT} -L ice_vlg
 
+vsimc:
+	cd modelsim && vsim -c -modelsimini modelsim.mpf -t ns ${TOP_TB_ENT} -L ice_vlg
+
 load:
 	sh /home/debian/load-fw/bw-prog.sh $(BUILD)/$(PROJ).bin
 

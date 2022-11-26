@@ -8,6 +8,7 @@ module tb_top ();
 
 parameter PERIOD_100 = 5; // 100 MHz
 parameter PERIOD_FCLK = 5; // also 100 MHz
+parameter GPMC_TCO = 5; // Delay data outputs on GPMC bus after GPMC clock
 
 reg reset_n;
 reg clk_100;
@@ -20,7 +21,6 @@ wire [3:0] led;
 wire [15:0] gpmc_ad;
 wire [15:0] gpmc_ad_in;
 reg  [15:0] gpmc_ad_out;
-reg         gpmc_ad_oe;
 reg         gpmc_advn;
 reg         gpmc_csn1;
 reg         gpmc_wein;
@@ -29,7 +29,7 @@ reg         gpmc_oen;
 wire [1:0]  led_sdi;
 
 assign gpmc_ad_in = gpmc_ad;
-assign gpmc_ad = (gpmc_ad_oe) ? gpmc_ad_out : 16'bZ;
+assign gpmc_ad = (gpmc_oen) ? gpmc_ad_out : 16'bZ;
 
 top #(
 ) dut (
@@ -53,7 +53,82 @@ always #PERIOD_FCLK gpmc_fclk=~gpmc_fclk;
 
 always @(posedge gpmc_fclk) gpmc_clk <= (gpmc_clk_en) ? ~gpmc_clk : 1'b0;
 
+task gpmc_wr (
+    input [15:0] addr,
+    input [15:0] data
+);
+    begin
+        // GPMC write transaction
+        @(negedge gpmc_fclk);
+        gpmc_oen <= 1'b1;
+        gpmc_csn1 <= 1'b1;
+        gpmc_advn <= 1'b1; // address latch
+        gpmc_wein <= 1'b1;
+        gpmc_clk_en <= 1'b1;
+
+        @(posedge gpmc_clk);
+        #GPMC_TCO;
+        gpmc_ad_out <= addr; // address phase
+        gpmc_csn1 <= 1'b0;
+        gpmc_advn <= 1'b0;
+
+        @(posedge gpmc_clk);
+        #GPMC_TCO;
+        gpmc_ad_out <= data; // data phase
+        gpmc_wein <= 1'b0;
+        gpmc_advn <= 1'b1;
+
+        @(posedge gpmc_clk);
+        #GPMC_TCO;
+        gpmc_ad_out <= 16'hXXXX;
+        gpmc_wein <= 1'b1;
+        gpmc_csn1 <= 1'b1;
+        gpmc_clk_en <= 1'b0;
+    end
+endtask
+
+task gpmc_rd (
+    input  [15:0] addr,
+    output [15:0] data
+);
+    begin
+        // GPMC read transaction
+        @(negedge gpmc_fclk);
+        gpmc_oen <= 1'b1;
+        gpmc_csn1 <= 1'b1;
+        gpmc_advn <= 1'b1; // address latch
+        gpmc_wein <= 1'b1;
+        gpmc_clk_en <= 1'b1;
+
+        @(posedge gpmc_clk);
+        #GPMC_TCO;
+        gpmc_ad_out <= addr; // address phase
+        gpmc_csn1 <= 1'b0;
+        gpmc_advn <= 1'b0;
+
+        @(posedge gpmc_clk);
+        #GPMC_TCO;
+        gpmc_ad_out <= 16'hXXXX; // data phase
+        gpmc_advn <= 1'b1;
+        gpmc_oen <= 1'b0;
+
+        repeat(4) @(posedge gpmc_clk);
+        #GPMC_TCO;
+        // Data latched at 100 ns
+        data <= gpmc_ad_in;
+        // Release and invalidate bus
+        gpmc_ad_out <= 16'hXXXX;
+        gpmc_oen <= 1'b1;
+        gpmc_csn1 <= 1'b1;
+        gpmc_clk_en <= 1'b0;
+        #1;
+    end
+endtask
+
+reg [15:0] temp_data;
+
 initial begin
+
     $display($time, "Startup");
     clk_100 <= 1'b0;
     gpmc_fclk <= 1'b0;
@@ -61,7 +136,6 @@ initial begin
     gpmc_clk_en <= 1'b0;
     reset_n <= 1'b0;
     gpmc_ad_out <= 16'h0;
-    gpmc_ad_oe <= 1'b1;
     gpmc_advn <= 1'b1;
     gpmc_wein <= 1'b1;
     gpmc_csn1 <= 1'b1;
@@ -98,8 +172,8 @@ initial begin
      * Write data on muxed AD bus at: 20 ns
      *
      * Bus turnaround time: 0 ns (default)
-     * Note that I think this means we can have back-to-back accesses without CS deasserting.
-     * This needs to be handled by the RTL, but should be doable because ADV_n will reassert.
+     * Note that there appears to be an extra cycle with CS deasserted built into the
+     * parameters above, so CS is guaranteed to deassert for at least one cycle.
      */
 
     // PLL reset must be at least 1 us
@@ -113,32 +187,17 @@ initial begin
     // It takes about another 7 us for the PLL to lock
     #7000;
 
+    gpmc_rd(16'h0000, temp_data);
+    $display("ID reg: %04x", temp_data);
+    gpmc_rd(16'h0002, temp_data);
+    $display("Scratch reg: %04x", temp_data);
+    gpmc_wr(16'h0002, 16'h4321);
+    gpmc_rd(16'h0002, temp_data);
+    $display("Scratch reg: %04x", temp_data);
+
     repeat (4) begin
-        // GPMC write transaction
-        @(posedge gpmc_fclk);
-        gpmc_oen <= 1'b1;
-        gpmc_csn1 <= 1'b1;
-        gpmc_ad_oe <= 1'b1;
-        gpmc_advn <= 1'b1; // address latch
-        gpmc_wein <= 1'b0;
-        gpmc_clk_en <= 1'b1;
-
-        @(negedge gpmc_clk);
-        gpmc_ad_out <= 16'h1000; // address phase
-        gpmc_csn1 <= 1'b0;
-        gpmc_advn <= 1'b0;
-
-        @(negedge gpmc_clk);
-        gpmc_ad_out <= 16'habcd; // data phase
-        gpmc_advn <= 1'b1;
-
-        @(negedge gpmc_clk);
-        // Docs indicate that CS_n can rise after last clock pulse
-        gpmc_ad_out <= 16'hXXXX;
-        gpmc_csn1 <= 1'b1;
-
-        @(negedge gpmc_clk);
-        gpmc_clk_en <= 1'b0;
+        // Write pixel fifo data
+        gpmc_wr(16'h4000, $random);
     end
 
     // Allow GPMC logic to progress
