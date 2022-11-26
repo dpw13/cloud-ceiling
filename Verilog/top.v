@@ -155,7 +155,8 @@ module top(
 		if (reset_20) begin
 			pxl_fifo_read <= 1'b0;
 		end else begin
-			pxl_fifo_read <= pxl_fifo_full_count > 1 && pxl_string_ready;
+			// Don't assert read twice in a row
+			pxl_fifo_read <= pxl_fifo_full_count > 0 && pxl_string_ready && !pxl_fifo_read;
 		end
 	end
 
@@ -164,6 +165,7 @@ module top(
 	) string_driverx (
 		.clk(clk_20),
 		.pixel_data(pxl_data),
+		.pixel_fifo_rd(pxl_fifo_read),
 		.pixel_data_valid(pxl_fifo_data_valid),
 		.h_blank(gpmc_rd_en),
 		.sdi(led_sdi[0]),

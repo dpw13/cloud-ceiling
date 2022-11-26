@@ -5,6 +5,7 @@
 module string_driver (input clk,
 
                       input [23:0] pixel_data,
+                      input        pixel_fifo_rd,
                       input        pixel_data_valid,
                       input        h_blank,
                       output       string_ready,
@@ -49,10 +50,13 @@ always @ (posedge clk)
 begin
     shift_start <= 1'b0;
 
-    if (pixel_data_valid) begin
-        shift_reg <= pixel_data;
+    if (pixel_fifo_rd) begin
+        // The data comes multiple cycles later depending on the latency of the FIFO.
+        // We need to mark us not ready while the FIFO retrieves the data.
         bit_count <= 25;
         shift_ready <= 1'b0;
+    end else if (pixel_data_valid) begin
+        shift_reg <= pixel_data;
         shift_start <= 1'b1;
     end else if (shift_done) begin
         // MSB sent first, shift up

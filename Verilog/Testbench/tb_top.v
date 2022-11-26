@@ -107,6 +107,12 @@ initial begin
         gpmc_clk_en <= 1'b0;
     end
 
+    // Allow GPMC logic to progress
+    #100;
+    gpmc_clk_en <= 1'b1;
+    #100;
+    gpmc_clk_en <= 1'b0;
+
     #5000;
 end
 
