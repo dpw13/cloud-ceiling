@@ -26,7 +26,7 @@ module gpmc_sync #(
     output                   rd_en,
     output                   wr_en,
     output                   address_valid,
-    output [ADDR_WIDTH-1:0]  address,
+    output [ADDR_WIDTH:0]  address,
     output [DATA_WIDTH-1:0]  data_out,
     input  [DATA_WIDTH-1:0]  data_in
 );
@@ -52,7 +52,11 @@ end
 assign rd_en = rd_en_lcl;
 assign wr_en = wr_en_lcl;
 assign address_valid = address_valid_lcl;
-assign address = addr_lcl;
+// AD contains address [17:1], with the bottom bit represented by the
+// byte-enables. We don't use the enables. Add a zero to the end of
+// the address just to make calls to devmem match the actual register
+// addresses.
+assign address = { addr_lcl, 1'b0 };
 assign data_out = data_out_lcl;
 
 assign gpmc_data_out = data_in;
@@ -74,7 +78,7 @@ SB_IO # (
     .OUTPUT_CLK()
 );
 
-always @ (posedge gpmc_clk or posedge gpmc_cs_n)
+always @ (negedge gpmc_clk or posedge gpmc_cs_n)
 begin
     if (gpmc_cs_n) begin
         // CS deasserted
@@ -89,7 +93,7 @@ begin
     end
 end
 
-always @ (posedge gpmc_clk)
+always @ (negedge gpmc_clk)
 begin
     // Don't reset read/write enables on CS_n; they persist after the
     // GPMC transaction on the wire.

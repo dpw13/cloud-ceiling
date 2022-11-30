@@ -1,4 +1,4 @@
-PROJ = blink
+PROJ = cloud_ceiling
 BUILD = ./out
 DEVICE = hx4k
 FOOTPRNT = tq144

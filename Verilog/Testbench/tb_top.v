@@ -7,10 +7,10 @@
 module tb_top ();
 
 parameter PERIOD_100 = 5; // 100 MHz
-parameter PERIOD_FCLK = 5; // also 100 MHz
-parameter GPMC_TCO = 5; // Delay data outputs on GPMC bus after GPMC clock
+parameter PERIOD_FCLK = 10; // 50 MHz, producing 25 MHz GPMC bus
+parameter GPMC_TCO = 0; // Delay data outputs on GPMC bus after GPMC clock
 
-reg reset_n;
+reg glbl_reset;
 reg clk_100;
 reg gpmc_fclk; // internal ARM clock
 reg gpmc_clk;
@@ -33,7 +33,7 @@ assign gpmc_ad = (gpmc_oen) ? gpmc_ad_out : 16'bZ;
 
 top #(
 ) dut (
-    .reset_n(reset_n),
+    .glbl_reset(glbl_reset),
     .clk_100(clk_100),
 
     .led(led),
@@ -54,21 +54,19 @@ always #PERIOD_FCLK gpmc_fclk=~gpmc_fclk;
 always @(posedge gpmc_fclk) gpmc_clk <= (gpmc_clk_en) ? ~gpmc_clk : 1'b0;
 
 task gpmc_wr (
-    input [15:0] addr,
+    input [16:0] addr,
     input [15:0] data
 );
     begin
+        // The timing below is based on the actual timing produced by the BBB
+
         // GPMC write transaction
         @(negedge gpmc_fclk);
-        gpmc_oen <= 1'b1;
-        gpmc_csn1 <= 1'b1;
-        gpmc_advn <= 1'b1; // address latch
-        gpmc_wein <= 1'b1;
         gpmc_clk_en <= 1'b1;
 
         @(posedge gpmc_clk);
         #GPMC_TCO;
-        gpmc_ad_out <= addr; // address phase
+        gpmc_ad_out <= addr[16:1]; // address phase
         gpmc_csn1 <= 1'b0;
         gpmc_advn <= 1'b0;
 
@@ -88,39 +86,41 @@ task gpmc_wr (
 endtask
 
 task gpmc_rd (
-    input  [15:0] addr,
+    input  [16:0] addr,
     output [15:0] data
 );
     begin
         // GPMC read transaction
-        @(negedge gpmc_fclk);
-        gpmc_oen <= 1'b1;
-        gpmc_csn1 <= 1'b1;
-        gpmc_advn <= 1'b1; // address latch
-        gpmc_wein <= 1'b1;
+        @(posedge gpmc_fclk);
         gpmc_clk_en <= 1'b1;
+        gpmc_csn1 <= 1'b1;
 
-        @(posedge gpmc_clk);
-        #GPMC_TCO;
-        gpmc_ad_out <= addr; // address phase
-        gpmc_csn1 <= 1'b0;
+        @(posedge gpmc_fclk);
+        gpmc_ad_out <= addr[16:1]; // address phase
         gpmc_advn <= 1'b0;
+        gpmc_csn1 <= 1'b0;
 
-        @(posedge gpmc_clk);
+        repeat (2) @(posedge gpmc_fclk);
         #GPMC_TCO;
         gpmc_ad_out <= 16'hXXXX; // data phase
-        gpmc_advn <= 1'b1;
         gpmc_oen <= 1'b0;
+        gpmc_advn <= 1'b1;
 
-        repeat(4) @(posedge gpmc_clk);
+        repeat (6) @(posedge gpmc_fclk);
         #GPMC_TCO;
         // Data latched at 100 ns
         data <= gpmc_ad_in;
+
+        repeat (2) @(posedge gpmc_fclk);
+        #GPMC_TCO;
         // Release and invalidate bus
         gpmc_ad_out <= 16'hXXXX;
         gpmc_oen <= 1'b1;
         gpmc_csn1 <= 1'b1;
         gpmc_clk_en <= 1'b0;
+
+        repeat (2) @(posedge gpmc_fclk);
+        gpmc_advn <= 1'b0; // idles low
         #1;
     end
 endtask
@@ -131,10 +131,10 @@ initial begin
 
     $display($time, "Startup");
     clk_100 <= 1'b0;
+    glbl_reset <= 1'b1;
     gpmc_fclk <= 1'b0;
     gpmc_clk <= 1'b0;
     gpmc_clk_en <= 1'b0;
-    reset_n <= 1'b0;
     gpmc_ad_out <= 16'h0;
     gpmc_advn <= 1'b1;
     gpmc_wein <= 1'b1;
@@ -178,7 +178,7 @@ initial begin
 
     // PLL reset must be at least 1 us
     #1005;
-    reset_n <= 1'b1;
+    glbl_reset <= 1'b0;
     // Run GPMC clock to allow synchronous resets to clear
     #100;
     gpmc_clk_en <= 1'b1;
@@ -188,16 +188,20 @@ initial begin
     #7000;
 
     gpmc_rd(16'h0000, temp_data);
+    #100;
     $display("ID reg: %04x", temp_data);
     gpmc_rd(16'h0002, temp_data);
+    #100;
     $display("Scratch reg: %04x", temp_data);
     gpmc_wr(16'h0002, 16'h4321);
+    #100;
     gpmc_rd(16'h0002, temp_data);
+    #100;
     $display("Scratch reg: %04x", temp_data);
 
     repeat (4) begin
         // Write pixel fifo data
-        gpmc_wr(16'h4000, $random);
+        gpmc_wr(16'h1000, $random);
     end
 
     // Allow GPMC logic to progress
@@ -206,7 +210,21 @@ initial begin
     #100;
     gpmc_clk_en <= 1'b0;
 
-    #5000;
+    #150_000;
+    // hblank
+    gpmc_wr(16'h14, 1);
+    #150_000;
+    // Write pixel fifo data
+    gpmc_wr(16'h1000, $random);
+
+    // Allow GPMC logic to progress
+    #100;
+    gpmc_clk_en <= 1'b1;
+    #100;
+    gpmc_clk_en <= 1'b0;
+
+    #10000;
+    $finish();
 end
 
 endmodule

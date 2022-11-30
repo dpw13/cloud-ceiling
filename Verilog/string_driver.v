@@ -2,18 +2,19 @@
  * String driver module for a string of WS2812B LED drivers.
  */
 
-module string_driver (input clk,
+module string_driver #(
+    parameter CLK_PERIOD_NS = 100
+) (
+    input clk,
 
-                      input [23:0] pixel_data,
-                      input        pixel_fifo_rd,
-                      input        pixel_data_valid,
-                      input        h_blank,
-                      output       string_ready,
+    input [23:0] pixel_data,
+    input        pixel_fifo_rd,
+    input        pixel_data_valid,
+    input        h_blank,
+    output       string_ready,
 
-                      output       sdi
+    output       sdi
 );
-
-parameter CLK_PERIOD_NS = 100;
 
 // Nominal data bit timing
 
@@ -79,7 +80,7 @@ localparam HBLANK = 3;
 // Tick count width is determined by the longest pulse length, which
 // is the hblank (reset) pulse. For a 10 MHz clock, the count is about
 // 500.
-reg [8:0] tick_count;
+reg [9:0] tick_count;
 reg [1:0] bit_state = IDLE;
 reg       bit_ready = 1'b1;
 reg       blank_ready = 1'b1;
@@ -105,6 +106,7 @@ begin
                 end
 
                 if (h_blank) begin
+                    bit_state <= HBLANK;
                     tick_count <= kHBlankCount;
                     // the blanking/reset pulse is only low
                     sdi_lcl <= 1'b0;

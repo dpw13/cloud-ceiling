@@ -8,6 +8,10 @@ ghdl --no-formal \
     VHDL/Fifo/SimpleFifo.vhd \
     VHDL/Fifo/RedundantFifo.vhd -e SimpleFifo
 
+ghdl --no-formal \
+    VHDL/Packages/PkgUtils.vhd \
+    VHDL/ClockXing/EventXing.vhd -e EventXing
+
 # For simulation
 write_verilog out/SimpleFifo.v
 
@@ -17,4 +21,4 @@ read_verilog Verilog/string_driver.v
 read_verilog Verilog/top.v
 
 synth_ice40 -top top
-write_json out/blink.synth.json
+write_json out/cloud_ceiling.synth.json

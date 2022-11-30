@@ -1,6 +1,10 @@
+/*
+ * Top-level module for cloud ceiling.
+ */
+
 module top(
 	input clk_100,
-	input reset_n,
+	input glbl_reset,
 
 	output [3:0] led,
 
@@ -18,7 +22,6 @@ module top(
 
 	localparam GPMC_ADDR_WIDTH = 16;
 	localparam GPMC_DATA_WIDTH = 16;
-	localparam COUNTER_WIDTH = 28;
 	localparam FIFO_ADDR_WIDTH = 12;
 	localparam FIFO_DATA_WIDTH = 16;
 
@@ -26,7 +29,7 @@ module top(
 	wire pll_locked;
 
 	pll system_pll (
-		.reset_n(reset_n),
+		.reset_n(~glbl_reset),
 		.clock_in(clk_100),
 		.clock_out(clk_20),
 		.locked(pll_locked)
@@ -37,7 +40,7 @@ module top(
 	always @(posedge clk_100)
 	begin
 		// Double-sync reset onto clk_100
-		reset_ms_100 <= !reset_n;
+		reset_ms_100 <= glbl_reset;
 		reset_100 <= reset_ms_100;
 	end
 
@@ -47,7 +50,7 @@ module top(
 	begin
 		// Double-sync reset onto clk_20
 		// Note that this isn't really safe because the combinatorial input to the metastable flop.
-		reset_ms_20 <= ~pll_locked || !reset_n;
+		reset_ms_20 <= ~pll_locked || glbl_reset;
 		reset_20 <= reset_ms_20;
 	end
 
@@ -56,29 +59,19 @@ module top(
 	always @(posedge gpmc_clk)
 	begin
 		// Double-sync reset onto gpmc_clk
-		gpmc_reset_ms <= !reset_n;
+		gpmc_reset_ms <= glbl_reset;
 		gpmc_reset <= gpmc_reset_ms;
 	end
 
 	wire gpmc_address_valid;
 	wire gpmc_rd_en;
 	wire gpmc_wr_en;
-	wire [GPMC_ADDR_WIDTH-1:0] gpmc_address;
+	wire [GPMC_ADDR_WIDTH:0] gpmc_address;
 	reg  [GPMC_DATA_WIDTH-1:0] gpmc_data_in;
 	wire [GPMC_DATA_WIDTH-1:0] gpmc_data_out;
 
-	reg [27:0] counter = 0;
-	always @(posedge clk_100)
-	begin
-		if (gpmc_wr_en && gpmc_address == 0) begin
-			counter[GPMC_DATA_WIDTH-1:0] <= gpmc_data_out;
-			counter[COUNTER_WIDTH-1:0] <= 0;
-		end else begin
-			counter <= counter + 1;
-		end
-	end
-
-	assign led[3:0] = counter[COUNTER_WIDTH-1:COUNTER_WIDTH-4];
+	// Light LED[1] when there's a GPMC transaction
+	assign led[1] = ~gpmc_csn1;
 
 	gpmc_sync # (
 		.ADDR_WIDTH(GPMC_ADDR_WIDTH),
@@ -101,12 +94,31 @@ module top(
 		.data_in(gpmc_data_in)
 	);
 
-	reg [15:0] basic_data_out = 16'h1234;
+	reg [15:0] basic_data_out = 0;
 	reg [15:0] scratch = 16'h1234;
+	reg        addr_valid_q;
+	reg [15:0] last_addr = 0;
+	reg [15:0] last_addr_q = 0;
+
+	reg gpmc_reset_100_ms, gpmc_reset_100;
+	reg gpmc_reset_20_ms, gpmc_reset_20;
+	reg gpmc_locked_ms, gpmc_locked;
 
 	always @(posedge gpmc_clk)
-	begin
+	begin : BASIC_REGS
 		// Basic info regs
+		addr_valid_q <= gpmc_address_valid;
+		if (gpmc_address_valid && !addr_valid_q) begin
+			last_addr <= gpmc_address;
+			last_addr_q <= last_addr;
+		end
+
+		gpmc_reset_100_ms <= reset_100;
+		gpmc_reset_100 <= gpmc_reset_100_ms;
+		gpmc_reset_20_ms <= reset_20;
+		gpmc_reset_20 <= gpmc_reset_20_ms;
+		gpmc_locked_ms <= pll_locked;
+		gpmc_locked <= gpmc_locked_ms;
 
 		// Read registers
 		basic_data_out <= 16'h0000;
@@ -116,6 +128,10 @@ module top(
 				basic_data_out <= 16'hC10D;
 			end else if (gpmc_address == 16'h2) begin
 				basic_data_out <= scratch;
+			end else if (gpmc_address == 16'h4) begin
+				// reset status
+				basic_data_out[15:2] <= 0;
+				basic_data_out[1:0] <= { gpmc_reset_100, gpmc_reset_20 };
 			end
 		end
 
@@ -127,19 +143,84 @@ module top(
 		end
 	end
 
+	reg [15:0] fifo_data_out = 0;
+	wire       fifo_overflow;
+	reg        fifo_overflow_latched = 0;
+	wire       fifo_underflow;
+	reg        fifo_underflow_latched = 0;
+	reg        fifo_clear_err = 0;
+	wire [FIFO_ADDR_WIDTH:0] fifo_empty_count;
+
+	always @(posedge gpmc_clk)
+	begin : FIFO_STATUS
+		if (fifo_clear_err)
+			fifo_overflow_latched <= 1'b0;
+			fifo_underflow_latched <= 1'b0;
+
+		if (fifo_overflow)
+			fifo_overflow_latched <= 1'b1;
+		if (fifo_underflow)
+			fifo_underflow_latched <= 1'b1;
+	end
+
+	reg gpmc_hblank = 0;
+
+	always @(posedge gpmc_clk)
+	begin : FIFO_REGS
+		// FIFO status regs
+
+		// Read registers
+		fifo_data_out <= 16'h0000;
+		if (gpmc_address_valid) begin
+			if (gpmc_address == 16'h10) begin
+				// Status
+				fifo_data_out[15:5] <= 0;
+				fifo_data_out[4] <= fifo_overflow_latched;
+				fifo_data_out[4:1] <= 0;
+				fifo_data_out[0] <= fifo_underflow_latched;
+			end else if (gpmc_address == 16'h12) begin
+				// Empty count
+				fifo_data_out <= fifo_empty_count;
+			end
+		end
+
+		fifo_clear_err <= 1'b0;
+		gpmc_hblank <= 1'b0;
+		// Write registers
+		if (gpmc_wr_en) begin
+			if (gpmc_address == 16'h10) begin
+				// Set bit zero to clear FIFO errors
+				fifo_clear_err <= gpmc_data_out[0];
+			end else if (gpmc_address == 16'h14) begin
+				gpmc_hblank <= gpmc_data_out[0];
+			end
+		end
+	end
+
 	// OR together all data outputs
 	always @(posedge gpmc_clk) begin
-		gpmc_data_in <= basic_data_out;
+		gpmc_data_in <= basic_data_out | fifo_data_out;
 	end
 
 	wire gpmc_fifo_write;
-	assign gpmc_fifo_write = (gpmc_wr_en && gpmc_address == 16'h4000);
+	// Anything in the second page will write to the FIFO
+	assign gpmc_fifo_write = (gpmc_wr_en && gpmc_address[15:12] == 4'h1);
+
+	reg fifo_toggle = 1'b0;
+	always @(posedge gpmc_clk)
+	begin
+		if (gpmc_fifo_write)
+			fifo_toggle <= ~fifo_toggle;
+	end
+
+	assign led[2] = fifo_toggle;
 
 	reg         pxl_fifo_read = 1'b0;
 	wire [FIFO_ADDR_WIDTH:0]   pxl_fifo_full_count; // Full count is one bit wider than kAddrWidth
 	wire [FIFO_DATA_WIDTH-1:0] pxl_fifo_data;
 	wire        pxl_fifo_data_valid;
 	wire [23:0] pxl_data;
+	wire        pxl_fifo_underflow;
 
 	assign pxl_data = { pxl_fifo_data[7:0], pxl_fifo_data};
 
@@ -152,8 +233,8 @@ module top(
 		.iReset(gpmc_reset),
 		.iData(gpmc_data_out),
 		.iWr(gpmc_fifo_write),
-		.iEmptyCount(),
-		.iOverflow(),
+		.iEmptyCount(fifo_empty_count),
+		.iOverflow(fifo_overflow),
 
 		.OClk(clk_20),
 		.oReset(reset_20),
@@ -162,13 +243,33 @@ module top(
 		.oDataErr(),
 		.oRd(pxl_fifo_read),
 		.oFullCount(pxl_fifo_full_count),
-		.oUnderflow()
+		.oUnderflow(pxl_fifo_underflow)
+	);
+
+	// Bring the underflow status back to the GPMC clock domain
+	EventXing underflow_xing (
+		.IClk(clk_20),
+		.iReady(),
+		.iEvent(pxl_fifo_underflow),
+		.OClk(gpmc_clk),
+		.oEvent(fifo_underflow)
+	);
+
+	// Bring HBLANK register bit to clk_20
+	wire h_blank;
+	EventXing hblank_xing (
+		.IClk(gpmc_clk),
+		.iReady(),
+		.iEvent(gpmc_hblank),
+		.OClk(clk_20),
+		.oEvent(h_blank)
 	);
 
 	wire pxl_string_ready;
 
 	// TODO: The ready signal above isn't responsive enough. We end up popping multiple elements off
-	// the FIFO before the first word is shifted out.
+	// the FIFO before the first word is shifted out, so we need to avoid reading twice in quick
+	// succession. That's ok though because the LED shifter is extremely slow.
 	always @(posedge clk_20)
 	begin
 		if (reset_20) begin
@@ -186,10 +287,13 @@ module top(
 		.pixel_data(pxl_data),
 		.pixel_fifo_rd(pxl_fifo_read),
 		.pixel_data_valid(pxl_fifo_data_valid),
-		.h_blank(1'b0),
+		.h_blank(h_blank),
 		.sdi(led_sdi[0]),
 		.string_ready(pxl_string_ready)
 	);
 
-	assign led_sdi[1] = 0;
+	assign led_sdi[1] = led_sdi[0];
+	// LED[0] on when shifting out data
+	assign led[0] = ~pxl_string_ready;
+
 endmodule
