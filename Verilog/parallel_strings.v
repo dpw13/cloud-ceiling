@@ -98,6 +98,17 @@ module parallel_strings #(
         end
     end
 
+    // h_blank timing is affected by the advancement of the ready signal in
+    // string_driver. If we assert h_blank too quickly after ready, we'll miss it.
+    reg h_blank_q = 1'b0;
+    always @(posedge clk)
+    begin
+        if (reset) begin
+            h_blank_q <= 1'b0;
+        end else begin
+            h_blank_q <= h_blank;
+        end
+    end
 
     // The ready signal above isn't responsive enough. We end up popping multiple elements off
     // the FIFO before the first word is shifted out, so we need to avoid reading twice in quick
@@ -175,7 +186,7 @@ module parallel_strings #(
                 .clk(clk),
                 .pixel_data(pxl_data),
                 .pixel_data_valid(pxl_data_valid[string]),
-                .h_blank(h_blank),
+                .h_blank(h_blank_q),
                 .sdi(led_sdi[string]),
                 .string_ready(string_ready[string])
             );
