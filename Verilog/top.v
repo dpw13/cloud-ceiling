@@ -215,14 +215,11 @@ module top(
 
 	assign led[2] = fifo_toggle;
 
-	reg         pxl_fifo_read = 1'b0;
+	wire        pxl_fifo_read;
 	wire [FIFO_ADDR_WIDTH:0]   pxl_fifo_full_count; // Full count is one bit wider than kAddrWidth
 	wire [FIFO_DATA_WIDTH-1:0] pxl_fifo_data;
 	wire        pxl_fifo_data_valid;
-	wire [23:0] pxl_data;
 	wire        pxl_fifo_underflow;
-
-	assign pxl_data = { pxl_fifo_data[7:0], pxl_fifo_data};
 
 	SimpleFifo # (
 		//.kLatency(2),
@@ -265,35 +262,23 @@ module top(
 		.oEvent(h_blank)
 	);
 
-	wire pxl_string_ready;
-
-	// TODO: The ready signal above isn't responsive enough. We end up popping multiple elements off
-	// the FIFO before the first word is shifted out, so we need to avoid reading twice in quick
-	// succession. That's ok though because the LED shifter is extremely slow.
-	always @(posedge clk_20)
-	begin
-		if (reset_20) begin
-			pxl_fifo_read <= 1'b0;
-		end else begin
-			// Don't assert read twice in a row
-			pxl_fifo_read <= pxl_fifo_full_count > 0 && pxl_string_ready && !pxl_fifo_read;
-		end
-	end
-
-	string_driver #(
-		.CLK_PERIOD_NS(50)
-	) string_driverx (
+	// String drivers
+	parallel_strings #(
+		.N_STRINGS(2),
+		.N_LEDS_PER_STRING(2),
+		.FIFO_ADDR_WIDTH(FIFO_ADDR_WIDTH),
+		.FIFO_DATA_WIDTH(FIFO_DATA_WIDTH)
+	) all_strings (
 		.clk(clk_20),
-		.pixel_data(pxl_data),
-		.pixel_fifo_rd(pxl_fifo_read),
-		.pixel_data_valid(pxl_fifo_data_valid),
-		.h_blank(h_blank),
-		.sdi(led_sdi[0]),
-		.string_ready(pxl_string_ready)
-	);
+		.reset(reset_20),
+		.fifo_full_count(pxl_fifo_full_count),
+		.fifo_data(pxl_fifo_data),
+		.fifo_data_valid(pxl_fifo_data_valid),
+		.fifo_read(pxl_fifo_read),
 
-	assign led_sdi[1] = led_sdi[0];
-	// LED[0] on when shifting out data
-	assign led[0] = ~pxl_string_ready;
+		.h_blank_in(h_blank),
+		.string_active(led[0]),
+		.led_sdi(led_sdi)
+	);
 
 endmodule

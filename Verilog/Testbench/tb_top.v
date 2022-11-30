@@ -59,6 +59,7 @@ task gpmc_wr (
 );
     begin
         // The timing below is based on the actual timing produced by the BBB
+        $display("WR: *0x%04x = 0x%04x", addr, data);
 
         // GPMC write transaction
         @(negedge gpmc_fclk);
@@ -199,10 +200,24 @@ initial begin
     #100;
     $display("Scratch reg: %04x", temp_data);
 
-    repeat (4) begin
+    // One frame
+    repeat (6) begin
         // Write pixel fifo data
         gpmc_wr(16'h1000, $random);
     end
+    // Access some other register to get the GPMC data through
+    gpmc_rd(16'h0000, temp_data);
+
+    #150_000;
+
+    // Two frames
+    repeat (12) begin
+        // Write pixel fifo data
+        gpmc_wr(16'h1000, $random);
+    end
+
+    // Access some other register to get the GPMC data through
+    gpmc_rd(16'h0000, temp_data);
 
     // Allow GPMC logic to progress
     #100;

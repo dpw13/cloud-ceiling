@@ -18,6 +18,7 @@ write_verilog out/SimpleFifo.v
 read_verilog Verilog/pll.v
 read_verilog Verilog/gpmc_sync.v
 read_verilog Verilog/string_driver.v
+read_verilog Verilog/parallel_strings.v
 read_verilog Verilog/top.v
 
 synth_ice40 -top top
