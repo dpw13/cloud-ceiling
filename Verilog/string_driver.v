@@ -62,7 +62,7 @@ begin
     shift_start <= 1'b0;
 
     if (pixel_data_valid) begin
-        bit_count <= 25;
+        bit_count <= 24;
         shift_ready <= 1'b0;
         shift_reg <= pixel_data;
         shift_start <= 1'b1;
@@ -142,7 +142,7 @@ begin
             if (tick_count > 0) begin
                 tick_count <= tick_count - 1;
                 // Also advance blank_ready to make sure the first bit isn't stretched
-                if (tick_count == 8) begin
+                if (tick_count == 4) begin
                     // Indicate ready
                     blank_ready <= 1'b1;
                 end

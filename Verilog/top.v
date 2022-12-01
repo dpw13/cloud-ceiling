@@ -265,7 +265,7 @@ module top(
 	// String drivers
 	parallel_strings #(
 		.N_STRINGS(2),
-		.N_LEDS_PER_STRING(128),
+		.N_LEDS_PER_STRING(8),
 		.FIFO_ADDR_WIDTH(FIFO_ADDR_WIDTH),
 		.FIFO_DATA_WIDTH(FIFO_DATA_WIDTH)
 	) all_strings (

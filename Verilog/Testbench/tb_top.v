@@ -10,6 +10,10 @@ parameter PERIOD_100 = 5; // 100 MHz
 parameter PERIOD_FCLK = 10; // 50 MHz, producing 25 MHz GPMC bus
 parameter GPMC_TCO = 0; // Delay data outputs on GPMC bus after GPMC clock
 
+localparam N_LEDS_PER_STRING = 8;
+localparam N_STRINGS = 2;
+localparam N_FRAMES = 3;
+
 reg glbl_reset;
 reg clk_100;
 reg gpmc_fclk; // internal ARM clock
@@ -52,6 +56,70 @@ always #PERIOD_100 clk_100=~clk_100;
 always #PERIOD_FCLK gpmc_fclk=~gpmc_fclk;
 
 always @(posedge gpmc_fclk) gpmc_clk <= (gpmc_clk_en) ? ~gpmc_clk : 1'b0;
+
+// Store expected frame data
+reg [7:0] frame_data[N_FRAMES-1:0][N_LEDS_PER_STRING*N_STRINGS*3-1:0];
+
+// WS2812B model
+realtime sdi_rise, sdi_fall;
+realtime sdi_high, sdi_low;
+always @ (negedge led_sdi[0])
+begin
+    sdi_fall <= $realtime();
+end
+
+localparam T0H_min = 400-150;
+localparam T0H_max = 400+150;
+localparam T1H_min = 800-150;
+localparam T1H_max = 800+150;
+localparam T0L_min = 850-150;
+localparam T0L_max = 850+150;
+localparam T1L_min = 450-150;
+localparam T1L_max = 450+150;
+
+reg [23:0] led_data = 0;
+reg [23:0] led_expected = 0;
+integer bit_count = 0;
+integer pixel_count = 0;
+integer frame_count = -1;
+
+always @ (posedge led_sdi[0])
+begin
+    sdi_high <= sdi_fall - sdi_rise;
+    sdi_low <= $realtime() - sdi_fall;
+    sdi_rise <= $realtime();
+    #1;
+
+    if (sdi_low > 50_000) begin
+        // We don't care about high time in this case
+        $display("HBLANK, start frame %d", frame_count + 1);
+        led_data <= 0;
+        bit_count <= 0;
+        pixel_count <= 0;
+        frame_count <= frame_count + 1;
+    end else if (sdi_high > T0H_min && sdi_high < T0H_max && sdi_low > T0L_min && sdi_low < T0L_max) begin
+        // shift up
+        led_data <= { led_data[22:0], 1'b0 };
+        bit_count <= bit_count + 1;
+    end else if (sdi_high > T1H_min && sdi_high < T1H_max && sdi_low > T1L_min && sdi_low < T1L_max) begin
+        led_data <= { led_data[22:0], 1'b1 };
+        bit_count <= bit_count + 1;
+    end else if ($realtime > 0) begin
+        $display("ERROR: Invalid bit time at %t ns: %t high %t low", sdi_rise, sdi_high, sdi_low);
+    end
+
+    if (bit_count == 24) begin
+        led_expected = { frame_data[frame_count][6*pixel_count+2], frame_data[frame_count][6*pixel_count+1], frame_data[frame_count][6*pixel_count+0] };
+        if (led_data != led_expected) begin
+            $display("ERROR: Data mismatch frame %d pixel %d: got 0x%06x expected 0x%06x", frame_count, pixel_count, led_data, led_expected);
+            $finish();
+        end else begin
+            $display("Data MATCH frame %d pixel %d: got 0x%06x expected 0x%06x", frame_count, pixel_count, led_data, led_expected);
+        end
+        pixel_count <= pixel_count + 1;
+        bit_count <= 0;
+    end
+end
 
 task gpmc_wr (
     input [16:0] addr,
@@ -127,8 +195,15 @@ task gpmc_rd (
 endtask
 
 reg [15:0] temp_data;
+integer word, frame, i;
 
 initial begin
+
+    for (frame=0; frame < N_FRAMES; frame = frame+1) begin
+        for (i=0; i < N_LEDS_PER_STRING*N_STRINGS*3; i = i + 1) begin
+            frame_data[frame][i] = $random();
+        end
+    end
 
     $display($time, "Startup");
     clk_100 <= 1'b0;
@@ -201,9 +276,10 @@ initial begin
     $display("Scratch reg: %04x", temp_data);
 
     // One frame
-    repeat (6) begin
-        // Write pixel fifo data
-        gpmc_wr(16'h1000, $random);
+    for(word = 0; word < N_LEDS_PER_STRING*N_STRINGS*3/2; word = word + 1) begin
+        temp_data[ 7:0] = frame_data[0][2*word + 0];
+        temp_data[15:8] = frame_data[0][2*word + 1];
+        gpmc_wr(16'h1000, temp_data);
     end
     // Access some other register to get the GPMC data through
     gpmc_rd(16'h0000, temp_data);
@@ -211,9 +287,12 @@ initial begin
     #150_000;
 
     // Two frames
-    repeat (12) begin
-        // Write pixel fifo data
-        gpmc_wr(16'h1000, $random);
+    for(frame = 1; frame < 3; frame = frame + 1) begin
+        for(word = 0; word < N_LEDS_PER_STRING*N_STRINGS*3/2; word = word + 1) begin
+            temp_data[ 7:0] = frame_data[frame][2*word + 0];
+            temp_data[15:8] = frame_data[frame][2*word + 1];
+            gpmc_wr(16'h1000, temp_data);
+        end
     end
 
     // Access some other register to get the GPMC data through
