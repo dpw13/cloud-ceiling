@@ -117,59 +117,105 @@ module parallel_strings #(
     // This is made easier by the fact that we round-robin through all the string drivers. This
     // design won't work as-is if only a single driver is used.
     reg flush_shift_reg = 1'b0;
+    reg [1:0] fifo_shift_count = 0;
+    reg fifo_shift_reg_primed = 0;
+    reg must_wait_for_ready = 1'b0;
+    reg next_word_completes_pixel = 1'b0;
+
     always @(posedge clk)
     begin
         if (reset || ~frame_active) begin
             fifo_read_lcl <= 1'b0;
             flush_shift_reg <= 1'b0;
+            fifo_shift_count <= 0;
+            fifo_shift_reg_primed <= 1'b0;
+            active_string <= 0;
+            must_wait_for_ready <= 1'b0;
+            next_word_completes_pixel <= 1'b0;
         end else begin
             // Don't assert read twice in a row
             if (flush_timer > 0) begin
-                flush_shift_reg <= (flush_timer == 3);
                 fifo_read_lcl <= 1'b0;
+                flush_shift_reg <= (flush_timer == 3);
+                fifo_shift_count <= 0;
+                fifo_shift_reg_primed <= 1'b0;
+                active_string <= 0;
             end else begin
+                fifo_read_lcl <= 1'b0;
                 flush_shift_reg <= 1'b0;
-                fifo_read_lcl <= fifo_full_count > 0 && string_ready[active_string] && !fifo_read_lcl;
+
+                if (fifo_full_count > 0 && !fifo_read_lcl) begin
+                    if (!must_wait_for_ready || string_ready[active_string]) begin
+                        fifo_read_lcl <= 1'b1;
+
+                        // Keep track of how many words we've shifted in. This will determine which
+                        // bits are valid in the shift register.
+                        if (fifo_shift_count == 2) begin
+                            fifo_shift_count <= 1'b0;
+                            fifo_shift_reg_primed <= 1'b1;
+                        end else begin
+                            fifo_shift_count <= fifo_shift_count + 1;
+                        end
+
+                        // If the last read completed the pixel, we need to wait for the next read.
+                        must_wait_for_ready <= next_word_completes_pixel;
+                    end
+
+                    if (must_wait_for_ready && string_ready[active_string]) begin
+                        // Jump to next string if we'll complete a pixel with this read
+                        if (active_string == (N_STRINGS - 1)) begin
+                            active_string <= 0;
+                        end else begin
+                            active_string <= active_string + 1;
+                        end
+                    end
+                end
+
+                // Pixel data is valid after shift count 1 and 2. Precalculate whether the *next* shift
+                // will complete the 24-bit pixel color.
+                if (fifo_shift_count == 2 || (fifo_shift_count == 0 && fifo_shift_reg_primed)) begin
+                    next_word_completes_pixel <= 1'b1;
+                end else begin
+                    next_word_completes_pixel <= 1'b0;
+                end
             end
         end
     end
 
-    reg [47:0] fifo_shift_reg = 0;
-    reg [1:0] fifo_shift_count = 0;
-    reg fifo_shift_reg_primed = 0;
+    reg next_word_completes_pixel_q;
+    reg next_word_completes_pixel_qq;
+    // Active string needs to be delayed to be coherent with the data to drive data valid properly
+    reg [$clog2(N_STRINGS)-1:0] fifo_data_destination_nx = 0;
+    reg [$clog2(N_STRINGS)-1:0] fifo_data_destination = 0;
+
     always @(posedge clk)
     begin
         if (reset || ~frame_active) begin
-            fifo_shift_reg <= 0;
-            fifo_shift_count <= 0;
-            pxl_data_valid <= 1'b0;
-            fifo_shift_reg_primed <= 1'b0;
-            active_string <= 0;
+            next_word_completes_pixel_q <= 1'b0;
+            next_word_completes_pixel_qq <= 1'b0;
+            fifo_data_destination_nx <= 0;
+            fifo_data_destination <= 0;
         end else begin
-            pxl_data_valid <= 1'b0;
+            fifo_data_destination_nx <= active_string;
+            fifo_data_destination <= fifo_data_destination_nx;
+            next_word_completes_pixel_q <= next_word_completes_pixel;
+            next_word_completes_pixel_qq <= next_word_completes_pixel_q;
+        end
+    end
 
+    reg [47:0] fifo_shift_reg = 0;
+    always @(posedge clk)
+    begin
+        if (reset || ~frame_active) begin
+            pxl_data_valid <= 0;
+            fifo_shift_reg <= 0;
+        end else begin
             if (fifo_data_valid || flush_shift_reg) begin
                 // Write data to top of shift register and shift down
                 fifo_shift_reg <= { fifo_data, fifo_shift_reg[47:16] };
-
-                // Keep track of how many words we've shifted in. This will determine which
-                // bits are valid in the shift register.
-                if (fifo_shift_count == 2) begin
-                    fifo_shift_count <= 1'b0;
-                    fifo_shift_reg_primed <= 1'b1;
-                end else begin
-                    fifo_shift_count <= fifo_shift_count + 1;
-                end
-
-                // Pixel data is valid after shift count 1 and 2
-                if (fifo_shift_count == 2 || (fifo_shift_count == 0 && fifo_shift_reg_primed)) begin
-                    pxl_data_valid[active_string] <= 1'b1;
-                    if (active_string == (N_STRINGS - 1)) begin
-                        active_string <= 0;
-                    end else begin
-                        active_string <= active_string + 1;
-                    end
-                end
+                pxl_data_valid[fifo_data_destination] <= next_word_completes_pixel_qq;
+            end else if (string_ready[fifo_data_destination]) begin
+                pxl_data_valid <= 0;
             end
         end
     end
@@ -181,7 +227,8 @@ module parallel_strings #(
     generate
         for (string = 0; string < N_STRINGS; string = string + 1) begin
             string_driver #(
-                .CLK_PERIOD_NS(50)
+                .CLK_PERIOD_NS(50),
+                .DATA_WIDTH(24)
             ) string_driverx (
                 .clk(clk),
                 .pixel_data(pxl_data),

@@ -85,39 +85,39 @@ integer frame_count = -1;
 
 always @ (posedge led_sdi[0])
 begin
-    sdi_high <= sdi_fall - sdi_rise;
-    sdi_low <= $realtime() - sdi_fall;
-    sdi_rise <= $realtime();
-    #1;
+    sdi_high = sdi_fall - sdi_rise;
+    sdi_low = $realtime() - sdi_fall;
+    sdi_rise = $realtime();
 
     if (sdi_low > 50_000) begin
         // We don't care about high time in this case
         $display("HBLANK, start frame %d", frame_count + 1);
-        led_data <= 0;
-        bit_count <= 0;
-        pixel_count <= 0;
-        frame_count <= frame_count + 1;
+        led_data = 0;
+        bit_count = 0;
+        pixel_count = 0;
+        frame_count = frame_count + 1;
     end else if (sdi_high > T0H_min && sdi_high < T0H_max && sdi_low > T0L_min && sdi_low < T0L_max) begin
         // shift up
-        led_data <= { led_data[22:0], 1'b0 };
-        bit_count <= bit_count + 1;
+        led_data = { led_data[22:0], 1'b0 };
+        bit_count = bit_count + 1;
     end else if (sdi_high > T1H_min && sdi_high < T1H_max && sdi_low > T1L_min && sdi_low < T1L_max) begin
-        led_data <= { led_data[22:0], 1'b1 };
-        bit_count <= bit_count + 1;
+        led_data = { led_data[22:0], 1'b1 };
+        bit_count = bit_count + 1;
     end else if ($realtime > 0) begin
         $display("ERROR: Invalid bit time at %t ns: %t high %t low", sdi_rise, sdi_high, sdi_low);
     end
 
     if (bit_count == 24) begin
         led_expected = { frame_data[frame_count][6*pixel_count+2], frame_data[frame_count][6*pixel_count+1], frame_data[frame_count][6*pixel_count+0] };
+
         if (led_data != led_expected) begin
             $display("ERROR: Data mismatch frame %d pixel %d: got 0x%06x expected 0x%06x", frame_count, pixel_count, led_data, led_expected);
             $finish();
         end else begin
             $display("Data MATCH frame %d pixel %d: got 0x%06x expected 0x%06x", frame_count, pixel_count, led_data, led_expected);
         end
-        pixel_count <= pixel_count + 1;
-        bit_count <= 0;
+        pixel_count = pixel_count + 1;
+        bit_count = 0;
     end
 end
 
@@ -284,7 +284,7 @@ initial begin
     // Access some other register to get the GPMC data through
     gpmc_rd(16'h0000, temp_data);
 
-    #150_000;
+    #300_000;
 
     // Two frames
     for(frame = 1; frame < 3; frame = frame + 1) begin
@@ -304,7 +304,7 @@ initial begin
     #100;
     gpmc_clk_en <= 1'b0;
 
-    #150_000;
+    #300_000;
     // hblank
     gpmc_wr(16'h14, 1);
     #150_000;
@@ -317,7 +317,7 @@ initial begin
     #100;
     gpmc_clk_en <= 1'b0;
 
-    #10000;
+    #300_000;
     $finish();
 end
 

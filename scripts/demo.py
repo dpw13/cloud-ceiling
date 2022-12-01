@@ -48,7 +48,7 @@ fb = np.frombuffer(fb_raw, np.uint16, FRAME_WORDS)
 fb_soft = np.zeros(FRAME_SIZE, dtype=np.uint8)
 fb_soft_16 = np.frombuffer(fb_soft, np.uint16, FRAME_WORDS)
 
-for i in range(0,8):
+for i in range(0, 256):
     for string_idx in range(0, STRING_COUNT):
         for led_idx in range(0, LED_COUNT):
             # Buffer format is (Pixel/String/Color)
@@ -56,25 +56,18 @@ for i in range(0,8):
             # Base index of Pixel/String is 3*Y + STRING_COUNT*3*X = 3*(Y + STRING_COUNT*X)
             byte_idx = 3*(string_idx + STRING_COUNT*led_idx)
 
-            if i % 4 == 0:
-                fb_soft[byte_idx + BLUE] = 0xfe
-                fb_soft[byte_idx + GREEN] = 0
-                fb_soft[byte_idx + RED] = 0
-            if i % 4 == 1:
-                fb_soft[byte_idx + BLUE] = 0
-                fb_soft[byte_idx + GREEN] = 0xfe
-                fb_soft[byte_idx + RED] = 0
-            if i % 4 == 2:
-                fb_soft[byte_idx + BLUE] = 0
-                fb_soft[byte_idx + GREEN] = 0
-                fb_soft[byte_idx + RED] = 0xfe
-            if i % 4 == 3:
-                fb_soft[byte_idx + BLUE] = 0
-                fb_soft[byte_idx + GREEN] = 0
-                fb_soft[byte_idx + RED] = 0
+            x = (i + led_idx) % 32
+            y = (x + 8) % 32
+            z = (y + 8) % 32
+            fb_soft[byte_idx + BLUE] = x
+            fb_soft[byte_idx + GREEN] = y
+            fb_soft[byte_idx + RED] = z
 
     empty = regs[FIFO_EMPTY_COUNT_REG]
-    print(f"Empty count before frame {i} is {empty}")
+    while (empty < 2048):
+        time.sleep(0.001)
+        empty = regs[FIFO_EMPTY_COUNT_REG]
+    #print(f"Empty count before frame {i} is {empty}")
 
     for p in range(0, FRAME_WORDS):
         #print(f"Word {p} = 0x{fb_soft_16[p]:04x}")
@@ -82,8 +75,16 @@ for i in range(0,8):
     #np.copyto(fb, fb_soft_16, casting='no')
 
     empty = regs[FIFO_EMPTY_COUNT_REG]
-    print(f"Empty count after frame {i} is {empty}")
+    #print(f"Empty count after frame {i} is {empty}")
 
-    time.sleep(1)
+    #time.sleep(0.01)
+
+time.sleep(0.1)
+
+# Turn off LEDs
+for p in range(0, FRAME_WORDS):
+    regs[0x800] = 0
+
+empty = regs[FIFO_EMPTY_COUNT_REG]
 
 os.close(memmap)
