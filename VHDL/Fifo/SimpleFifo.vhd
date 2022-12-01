@@ -14,9 +14,11 @@ entity SimpleFifo is
     --* The read latency of the FIFO
     kLatency : in natural range 1 to 2 := 2;
     --* Log base 2 of the FIFO depth
-    kAddrWidth : in natural := 12;
+    kAddrWidth : in natural := 13;
     --* The width of the data inputs and outputs
-    kDataWidth : in natural := 16
+    kDataWidth : in natural := 16;
+    --* True to use parity RAM, false otherwise
+    kUseParity : in boolean := false
     );
   port (
     --* The write clock. All i* signals are sychronous to IClk
@@ -89,21 +91,43 @@ begin
   -- Actual dual-port RAM addresses do not contain the top bit, which is only used for
   -- overflow/underflow detection
 
-  DpParityRamx: entity work.DpParityRam (arch)
-    generic map (
-      kLatency   => kLatency,    --natural range 1:2 :=2
-      kAddrWidth => kAddrWidth,  --natural:=10
-      kDataWidth => kDataWidth)  --natural:=32
-    port map (
-      IClk       => IClk,                          --in  std_logic
-      iAddr      => iAddr(kAddrWidth-1 downto 0),  --in  unsigned(kAddrWidth-1:0)
-      iWr        => iWr,                           --in  boolean
-      iData      => iData,                         --in  std_logic_vector(kDataWidth-1:0)
-      OClk       => OClk,                          --in  std_logic
-      oAddr      => oAddr(kAddrWidth-1 downto 0),  --in  unsigned(kAddrWidth-1:0)
-      oRd        => oRd,                           --in  boolean
-      oData      => oData,                         --out std_logic_vector(kDataWidth-1:0)
-      oDataValid => oDataValid,                    --out boolean
-      oDataErr   => oDataErr);                     --out boolean
+  ParityRam: if kUseParity generate
+    DpParityRamx: entity work.DpParityRam (arch)
+      generic map (
+        kLatency   => kLatency,    --natural range 1:2 :=2
+        kAddrWidth => kAddrWidth,  --natural:=10
+        kDataWidth => kDataWidth)  --natural:=32
+      port map (
+        IClk       => IClk,                          --in  std_logic
+        iAddr      => iAddr(kAddrWidth-1 downto 0),  --in  unsigned(kAddrWidth-1:0)
+        iWr        => iWr,                           --in  boolean
+        iData      => iData,                         --in  std_logic_vector(kDataWidth-1:0)
+        OClk       => OClk,                          --in  std_logic
+        oAddr      => oAddr(kAddrWidth-1 downto 0),  --in  unsigned(kAddrWidth-1:0)
+        oRd        => oRd,                           --in  boolean
+        oData      => oData,                         --out std_logic_vector(kDataWidth-1:0)
+        oDataValid => oDataValid,                    --out boolean
+        oDataErr   => oDataErr);                     --out boolean
+  end generate;
+
+  NoParityRam: if not kUseParity generate
+    DpRamx: entity work.DpRam (arch)
+      generic map (
+        kLatency   => kLatency,    --natural range 1:2 :=2
+        kAddrWidth => kAddrWidth,  --natural:=10
+        kDataWidth => kDataWidth)  --natural:=32
+      port map (
+        IClk       => IClk,                          --in  std_logic
+        iAddr      => iAddr(kAddrWidth-1 downto 0),  --in  unsigned(kAddrWidth-1:0)
+        iWr        => iWr,                           --in  boolean
+        iData      => iData,                         --in  std_logic_vector(kDataWidth-1:0)
+        OClk       => OClk,                          --in  std_logic
+        oAddr      => oAddr(kAddrWidth-1 downto 0),  --in  unsigned(kAddrWidth-1:0)
+        oRd        => oRd,                           --in  boolean
+        oData      => oData,                         --out std_logic_vector(kDataWidth-1:0)
+        oDataValid => oDataValid);                   --out boolean
+
+      oDataErr <= false;
+  end generate;
 
 end architecture ; -- arch

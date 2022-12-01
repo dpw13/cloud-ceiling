@@ -17,12 +17,12 @@ module top(
 	input         gpmc_clk,
 
 	// LED string interface
-	output [1:0]  led_sdi
+	output [3:0]  led_sdi
 );
 
 	localparam GPMC_ADDR_WIDTH = 16;
 	localparam GPMC_DATA_WIDTH = 16;
-	localparam FIFO_ADDR_WIDTH = 12;
+	localparam FIFO_ADDR_WIDTH = 13;
 	localparam FIFO_DATA_WIDTH = 16;
 
 	wire clk_20;
@@ -264,8 +264,8 @@ module top(
 
 	// String drivers
 	parallel_strings #(
-		.N_STRINGS(2),
-		.N_LEDS_PER_STRING(8),
+		.N_STRINGS(4),
+		.N_LEDS_PER_STRING(128),
 		.FIFO_ADDR_WIDTH(FIFO_ADDR_WIDTH),
 		.FIFO_DATA_WIDTH(FIFO_DATA_WIDTH)
 	) all_strings (

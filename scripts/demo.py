@@ -85,6 +85,9 @@ time.sleep(0.1)
 for p in range(0, FRAME_WORDS):
     regs[0x800] = 0
 
-empty = regs[FIFO_EMPTY_COUNT_REG]
+status = regs[FIFO_STATUS_REG]
+status = regs[FIFO_STATUS_REG]
+
+print(f"FIFO status: 0x{status:04x}")
 
 os.close(memmap)
