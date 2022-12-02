@@ -16,3 +16,7 @@ Driver notes
 		dma_async_issue_pending(chan);
 
 - check completion using callback or dma_async_is_tx_complete()
+
+echo 'file dmaengine.c +p'>/sys/kernel/debug/dynamic_debug/control
+echo 'file edma.c +p'>/sys/kernel/debug/dynamic_debug/control
+echo 'file virt-dma.c +p'>/sys/kernel/debug/dynamic_debug/control

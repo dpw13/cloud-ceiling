@@ -9,3 +9,4 @@ modelsim
 *.symvers
 *.mod.c
 *.order
+*.d

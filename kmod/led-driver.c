@@ -11,16 +11,6 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Dane Wagner");
 MODULE_DESCRIPTION("Multi-string LED driver");
 
-static unsigned int n_strings = 2;
-module_param(n_strings, uint, S_IRUGO | S_IWUSR);
-MODULE_PARM_DESC(n_strings,
-		"Number of strings implemented (default: 1)");
-
-static unsigned int n_leds_per_string = 150;
-module_param(n_leds_per_string, uint, S_IRUGO | S_IWUSR);
-MODULE_PARM_DESC(n_leds_per_string,
-		"Number of LEDs per string (default: 1)");
-
 static struct ledfb_struct {
         struct device *dev;
         int major;
@@ -28,7 +18,7 @@ static struct ledfb_struct {
         dma_addr_t src_handle;
         void *fb;
         size_t fb_size;
-        struct dma_async_tx_descriptor *tx;
+        int frame;
 } ledfb_dev;
 
 #define BUFFER_SIZE 0x2000
@@ -36,42 +26,110 @@ static struct ledfb_struct {
 
 static const struct vm_operations_struct mmap_ledfb_ops = {};
 
+static void dma_callback(void *arg)
+{
+        dev_debug(ledfb_dev.dev, "DMA callback\n");
+        ledfb_dev.frame++;
+}
+
 static long ioctl_ledfb(struct file *filp, unsigned int ioctl_num, unsigned long ioctl_param)
 {
-        dev_info(ledfb_dev.dev, "Got ioctl: %u %lu\n", ioctl_num, ioctl_param);
+        struct dma_async_tx_descriptor *tx;
+        dma_cookie_t cookie;
 
-        ledfb_dev.tx->tx_submit(ledfb_dev.tx);
+        dev_dbg(ledfb_dev.dev, "Got ioctl: %u %lu. Frame %d\n", ioctl_num, ioctl_param, ledfb_dev.frame);
+        if (ioctl_param > 0) {
+                ledfb_dev.fb_size = (size_t) ioctl_param;
+        }
+        if (ledfb_dev.fb_size == 0 || ledfb_dev.fb_size > BUFFER_SIZE) {
+                dev_warn(ledfb_dev.dev, "Invalid buffer size specified in ioctl: %lu", ioctl_param);
+                ledfb_dev.fb_size = 0;
+                return -EINVAL;
+        }
+
+        /* Create tx descriptor */
+        tx = ledfb_dev.chan->device->device_prep_dma_memcpy(
+                ledfb_dev.chan,
+                FPGA_FIFO_ADDR, // destination bus address
+                ledfb_dev.src_handle, // src bus address
+                ledfb_dev.fb_size, // size
+                0); // dma_ctrl_flags
+
+        if (!tx) {
+                dev_err(ledfb_dev.dev, "Failed to create TX descriptor\n");
+                return -ENXIO;
+        }
+
+        tx->callback = dma_callback;
+
+        /* I can't tell whether tx is consumed here or not */
+        cookie = tx->tx_submit(tx);
+
+        if (dma_submit_error(cookie)) {
+                dev_err(ledfb_dev.dev, "Failed to submit TX descriptor");
+                return -EINVAL;
+        }
+        dma_async_issue_pending(ledfb_dev.chan);
 
         return 0;
 }
 
-static void dma_callback(void *arg)
+#ifndef __HAVE_PHYS_MEM_ACCESS_PROT
+static pgprot_t phys_mem_access_prot(struct file *file, unsigned long pfn,
+				     unsigned long size, pgprot_t vma_prot)
 {
-        dev_info(ledfb_dev.dev, "DMA callback\n");
+#ifdef pgprot_noncached
+	phys_addr_t offset = pfn << PAGE_SHIFT;
+
+	if (uncached_access(file, offset))
+		return pgprot_noncached(vma_prot);
+#endif
+	return vma_prot;
 }
+#endif
 
 static int mmap_ledfb(struct file *filp, struct vm_area_struct *vma)
 {
         size_t size = vma->vm_end - vma->vm_start;
         phys_addr_t offset = (phys_addr_t)vma->vm_pgoff << PAGE_SHIFT;
+        phys_addr_t fb_bus = virt_to_pfn(ledfb_dev.fb);
 
         /* Only an offset of zero is supported */
-        if (offset != 0)
+        if (offset != 0) {
+                dev_err(ledfb_dev.dev, "Invalid offset: %pa", &offset);
                 return -EINVAL;
+        }
 
         /* Maximum size is two pages */
-        if (size > 0x2000)
+        if (size > 0x2000) {
+                dev_err(ledfb_dev.dev, "Invalid size: %pa", &offset);
                 return -EINVAL;
+        }
+
+        /*
+         * The size here is coerced to a multiple of the page size, so we
+         * can't set an accurate FB size from the mmap()
+         */
+        ledfb_dev.fb_size = 0;
+        ledfb_dev.frame = 0;
+
+	vma->vm_page_prot = phys_mem_access_prot(filp, vma->vm_pgoff,
+                                                size,
+                                                vma->vm_page_prot);
 
         vma->vm_ops = &mmap_ledfb_ops;
 
         if (remap_pfn_range(vma,
-                             virt_to_phys((void*)((unsigned long)ledfb_dev.fb)),
-                             0,
-                             size,
-                             vma->vm_page_prot)) {
+                            vma->vm_start,
+                            fb_bus,
+                            size,
+                            vma->vm_page_prot)) {
+                dev_err(ledfb_dev.dev, "Failed to remap offset %p (phys %pa)", ledfb_dev.fb, &fb_bus);
                 return -ENXIO;
         }
+
+        dev_info(ledfb_dev.dev, "Mapped buffer kvirt = %p phys %pa start %lx end %lx", ledfb_dev.fb, &fb_bus, vma->vm_start, vma->vm_end);
+
         return 0;
 }
 
@@ -86,41 +144,14 @@ static const struct file_operations __maybe_unused mem_fops = {
         .unlocked_ioctl = ioctl_ledfb,
 };
 
-static int memory_open(struct inode *inode, struct file *filp)
-{
-        int minor;
-
-        minor = iminor(inode);
-        if (minor != 1)
-                return -ENXIO;
-
-        filp->f_op = &mem_fops;
-        filp->f_mode |= FMODE_UNSIGNED_OFFSET;
-
-        return open_ledfb(inode, filp);
-}
-
 static const struct file_operations memory_fops = {
-        .open = memory_open,
+        .mmap           = mmap_ledfb,
+        .open           = open_ledfb,
+        .unlocked_ioctl = ioctl_ledfb,
         .llseek = noop_llseek,
 };
 
 static struct class *ledfb_class;
-
-#if 0
-#define DMA_CHANNEL_NAME "dma0chan20"
-#define DMA_DEVICE_NAME "49000000.edma"
-
-static bool dma_filter(struct dma_chan *chan, void *param)
-{
-        pr_info("Checking %s %s\n", dma_chan_name(chan), dev_name(chan->device->dev));
-	if (strcmp(dma_chan_name(chan), DMA_CHANNEL_NAME) != 0 ||
-	    strcmp(dev_name(chan->device->dev), DMA_DEVICE_NAME) != 0)
-		return false;
-	else
-		return true;
-}
-#endif
 
 static int __init led_driver_init(void)
 {
@@ -186,26 +217,8 @@ static int __init led_driver_init(void)
                 goto failed_map;
 	}
 
-        /* Create tx descriptor */
-        ledfb_dev.fb_size = n_strings * n_leds_per_string * 3; // 3 color bytes per pixel
-        ledfb_dev.tx = ledfb_dev.chan->device->device_prep_dma_memcpy(
-                ledfb_dev.chan,
-                FPGA_FIFO_ADDR, // destination bus address
-                ledfb_dev.src_handle, // src bus address
-                ledfb_dev.fb_size, // size
-                0); // dma_ctrl_flags
-
-        if (!ledfb_dev.tx) {
-                dev_err(ledfb_dev.dev, "Failed to create TX descriptor\n");
-                ret = -ENXIO;
-                goto failed_tx_desc;
-        }
-
-        ledfb_dev.tx->callback = dma_callback;
         goto success;
 
-failed_tx_desc:
-	dma_unmap_single(ledfb_dev.dev, ledfb_dev.src_handle, BUFFER_SIZE, DMA_TO_DEVICE);
 failed_map:
         kfree(ledfb_dev.fb);
 failed_alloc:
