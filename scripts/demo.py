@@ -27,9 +27,11 @@ fb_raw = mmap.mmap(ledfb_fd, length=FRAME_SIZE, offset=0)
 fb = np.frombuffer(fb_raw, np.uint8, FRAME_SIZE)
 fb_32 = np.frombuffer(fb, np.uint32, FRAME_WORDS)
 
-for frame in range(0, 1024):
-    #print("Filling")
-    animation.default.render(frame, fb, fb_32)
+animation.flame.init()
+
+frame = 0
+while True:
+    animation.flame.render(frame, fb, fb_32)
 
     empty = regs[FIFO_EMPTY_COUNT_REG]
     while (empty < 2048):
@@ -38,8 +40,10 @@ for frame in range(0, 1024):
     #print(f"Empty count before frame {frame} is {empty}")
 
     fcntl.ioctl(ledfb_fd, 0, FRAME_SIZE)
-    time.sleep(0.004)
-    status = regs[FIFO_STATUS_REG]
+    #time.sleep(0.004)
+    #status = regs[FIFO_STATUS_REG]
+
+    frame += 1
 
 time.sleep(0.1)
 

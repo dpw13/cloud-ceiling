@@ -5,6 +5,9 @@
 from constants import *
 import numpy as np
 
+def init():
+    pass
+
 def render(frame, fb, fb_32):
     fb_32.fill(0)
     for string_idx in range(0, STRING_COUNT):
