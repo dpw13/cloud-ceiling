@@ -10,3 +10,4 @@ modelsim
 *.mod.c
 *.order
 *.d
+__pycache__
