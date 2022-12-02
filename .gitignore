@@ -2,3 +2,10 @@ out
 modelsim
 *.swp
 ~*
+*.cmd
+*.o
+*.ko
+*.mod
+*.symvers
+*.mod.c
+*.order
