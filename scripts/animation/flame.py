@@ -148,7 +148,7 @@ class Particle(object):
 
 def init():
     for i in range(0, N_PARTICLES):
-        particles.append(Particle())
+        particles.append(Drop())
 
 def render(frame, fb, fb_32):
     fb_32.fill(0)
