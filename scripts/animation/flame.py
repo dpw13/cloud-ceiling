@@ -4,7 +4,8 @@
 
 import random
 import numpy as np
-import math
+import wand.image
+import wand.drawing
 
 from constants import *
 
@@ -23,6 +24,8 @@ BURN_RATE_MAX = 0.120
 SIZE_MIN = 0.4
 SIZE_MAX = 4.0
 
+AGE_MAX = 6.0
+
 particles = []
 
 COLOR_MAP = [
@@ -37,12 +40,12 @@ COLOR_MAP = [
     [ 6.0, 0x00, 0x00, 0x00 ], # black
 ]
 
-AGE_XP = [m[0] for m in COLOR_MAP]
-B_FP = [m[1] for m in COLOR_MAP]
-G_FP = [m[2] for m in COLOR_MAP]
-R_FP = [m[3] for m in COLOR_MAP]
+AGE_XP = np.array([m[0] for m in COLOR_MAP])
+B_FP = np.array([m[1] for m in COLOR_MAP], dtype=np.uint8)
+G_FP = np.array([m[2] for m in COLOR_MAP], dtype=np.uint8)
+R_FP = np.array([m[3] for m in COLOR_MAP], dtype=np.uint8)
 
-AGE_MAX = 6.0
+BG = wand.color.Color('black')
 
 class Particle(object):
     def __init__(self):
@@ -88,58 +91,17 @@ class Particle(object):
         elif self.age > AGE_MAX:
             self.reset()
 
-    # We consider pixel (0,0) to be a square from (0,0) to (1,1). We
-    # could also consider the pixel as (-0.5,-0.5) to (0.5,0.5) but
-    # 0,0 to 1,1 makes a lot of the math simpler.
+    def render(self, draw):
+        b = int(round(np.interp(self.age, AGE_XP, B_FP)))
+        g = int(round(np.interp(self.age, AGE_XP, G_FP)))
+        r = int(round(np.interp(self.age, AGE_XP, R_FP)))
 
-    def overlap(self, x, y):
-        # Compute the union of the current pixel and the particle. The area
-        # of this union divided by the area of the pixel is the amount of light
-        # to contribute to this pixel. The pixel's area is by definition 1x1 so
-        # we can omit dividing by the pixel's area.
-        union_x_min = max(x, self.x_min)
-        union_x_max = min(x + 1.0, self.x_max)
-        union_y_min = max(y, self.y_min)
-        union_y_max = min(y + 1.0, self.y_max)
+        draw.fill_color = wand.color.Color(f"#{r:02x}{g:02x}{b:02x}")
 
-        ov = (union_x_max - union_x_min)*(union_y_max - union_y_min)
-        #print(f"Union: {x_min:0.2f}:{x_max:0.2f},{y_min:0.2f}:{y_max:0.2f} Area: {ov:0.2f}")
-
-        return ov
-
-    def render(self, fb):
-        b = np.interp(self.age, AGE_XP, B_FP)
-        g = np.interp(self.age, AGE_XP, G_FP)
-        r = np.interp(self.age, AGE_XP, R_FP)
-
-        rb = round(b)
-        rg = round(g)
-        rr = round(r)
-
-        # Iterate over all pixels covered by this particle
-        x_start = max(0, math.floor(self.x_min))
-        x_end = min(LED_COUNT-1, math.ceil(self.x_max))
-        y_start = max(0, math.floor(self.y_min))
-        y_end = min(STRING_COUNT, math.ceil(self.y_max))
-
-        for x_lcl in range(x_start, x_end):
-            for y_lcl in range(y_start, y_end):
-                byte_idx = 3*(y_lcl + STRING_COUNT*x_lcl)
-                # Calculate the overlap between this pixel's location and the box
-                # covering the particle
-                if (x_lcl == x_start or x_lcl == x_end or y_lcl == y_start or y_lcl == y_end):
-                    # Only bother calculating antialiasing on the edge of the particle
-                    ov = self.overlap(x_lcl, y_lcl)
-                    #print(f"Overlap at {x_lcl},{y_lcl} = {ov}")
-
-                    fb[byte_idx + BLUE] = min(255, fb[byte_idx + BLUE] + round(ov*b))
-                    fb[byte_idx + GREEN] = min(255, fb[byte_idx + GREEN] + round(ov*g))
-                    fb[byte_idx + RED] = min(255, fb[byte_idx + RED] + round(ov*r))
-                else:
-                    # On the interior
-                    fb[byte_idx + BLUE] = min(255, fb[byte_idx + BLUE] + rb)
-                    fb[byte_idx + GREEN] = min(255, fb[byte_idx + GREEN] + rg)
-                    fb[byte_idx + RED] = min(255, fb[byte_idx + RED] + rr)
+        # Don't forget to transpose x and y coordinates in draw calls
+        # Left: y_min Right: y_max
+        # Top: x_min Bottom: x_max
+        draw.rectangle(left=self.y_min, right=self.y_max, top=self.x_min, bottom=self.x_max)
 
     def __str__(self):
         s = f"x = {self.x:0.2f} dx = {self.x_vel:0.2f} y = {self.y:0.2f} dy = {self.y_vel:0.2f} age = {self.age:0.2f}"
@@ -148,13 +110,25 @@ class Particle(object):
 
 def init():
     for i in range(0, N_PARTICLES):
-        particles.append(Drop())
+        particles.append(Particle())
 
 def render(frame, fb, fb_32):
-    fb_32.fill(0)
-
     for i, p in enumerate(particles):
         p.update()
-        #print(f"{i}: {p}")
-        p.render(fb)
-    
+
+    with wand.drawing.Drawing() as draw:
+        draw.stroke_width = 0
+
+        for i, p in enumerate(particles):
+            p.render(draw)
+        # ImageMagick exports data with rows as the primary index. We stream data to the
+        # framebuffer columns-first to reduce the memory requirements of the FIFO. Rather
+        # than generating the image and transposing, just generate a transposed image.
+        with wand.image.Image(width=STRING_COUNT, height=LED_COUNT, background=BG) as img:
+            # Rasterize drawing primitives
+            draw(img)
+            # Export pixels in framebuffer format
+            pxl_list = img.export_pixels(channel_map='BRG', storage='char')
+            # Copy to framebuffer. Ideally this additional copy wouldn't be necessary
+            # export_pixels returns a list of int32 and our destination buffer is a list of u8
+            np.copyto(fb, pxl_list, casting='unsafe')    
