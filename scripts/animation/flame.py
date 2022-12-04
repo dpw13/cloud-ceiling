@@ -9,20 +9,22 @@ import wand.drawing
 
 from constants import *
 
-N_PARTICLES = 10
+N_PARTICLES = 15
 
 Y_START_MIN = 0.5
 Y_START_MAX = 2.5
 
-X_MIN_VEL =  0.6
-X_MAX_VEL =  1.2
+X_MIN_VEL =  0.4
+X_MAX_VEL =  0.8
 Y_MIN_VEL = -0.02
 Y_MAX_VEL =  0.02
-BURN_RATE_MIN = 0.070
-BURN_RATE_MAX = 0.120
+BURN_RATE_MIN = 0.100
+BURN_RATE_MAX = 0.150
 # This is approximately the radius, not diameter
-SIZE_MIN = 0.4
-SIZE_MAX = 4.0
+SIZE_MIN = 0.2
+SIZE_MAX = 0.6
+
+LENGTH_SCALE = 8.0
 
 AGE_MAX = 6.0
 
@@ -65,8 +67,8 @@ class Particle(object):
     def reset(self):
         # Set an initial position and speed
         size = random.uniform(SIZE_MIN, SIZE_MAX)
-        self.x_min = -size
-        self.x_max = size
+        self.x_min = -LENGTH_SCALE*size
+        self.x_max = LENGTH_SCALE*size
         y = random.uniform(Y_START_MIN, Y_START_MAX)
         self.y_min = y - size
         self.y_max = y + size
@@ -81,6 +83,9 @@ class Particle(object):
         self.y_min += self.y_vel
         self.y_max += self.y_vel
         self.age += self.burn_rate
+
+        # Accelerate!
+        self.x_vel += 0.05
 
         if (self.y_max) < 0 or (self.y_min) > (STRING_COUNT):
             #print(f"Y {self.y_min}:{self.y_max} out of bounds")

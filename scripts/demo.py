@@ -8,7 +8,6 @@ from constants import *
 import animation.default
 import animation.flame
 import animation.drops
-import animation.image
 
 memmap = os.open("/dev/mem", os.O_RDWR)
 regs_raw = mmap.mmap(memmap, length=FPGA_REGS_SIZE, offset=FPGA_REGS_BASE)
@@ -29,11 +28,11 @@ fb_raw = mmap.mmap(ledfb_fd, length=FRAME_SIZE, offset=0)
 fb = np.frombuffer(fb_raw, np.uint8, FRAME_SIZE)
 fb_32 = np.frombuffer(fb, np.uint32, FRAME_WORDS)
 
-animation.image.init()
+animation.flame.init()
 
 frame = 0
 while True:
-    animation.image.render(frame, fb, fb_32)
+    animation.flame.render(frame, fb, fb_32)
 
     empty = regs[FIFO_EMPTY_COUNT_REG]
     while (empty < 2048):
