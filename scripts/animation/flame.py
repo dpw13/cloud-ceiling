@@ -14,12 +14,12 @@ N_PARTICLES = 15
 Y_START_MIN = 0.5
 Y_START_MAX = 2.5
 
-X_MIN_VEL =  0.4
-X_MAX_VEL =  0.8
+X_MIN_VEL =  0.2
+X_MAX_VEL =  0.4
 Y_MIN_VEL = -0.02
 Y_MAX_VEL =  0.02
-BURN_RATE_MIN = 0.100
-BURN_RATE_MAX = 0.150
+BURN_RATE_MIN = 0.120
+BURN_RATE_MAX = 0.200
 # This is approximately the radius, not diameter
 SIZE_MIN = 0.2
 SIZE_MAX = 0.6
@@ -34,7 +34,7 @@ COLOR_MAP = [
     # Format:
     # [ age, b, g, r ]
     [ 0.0, 0x00, 0x00, 0x00 ], # black
-    [ 1.0, 0x20, 0x00, 0x00 ], # soft blue
+    [ 1.0, 0x10, 0x00, 0x00 ], # soft blue
     [ 1.5, 0x00, 0x00, 0x00 ], # black
     [ 2.0, 0x00, 0x00, 0x40 ], # red
     [ 3.0, 0x00, 0x80, 0x80 ], # bright yellow
@@ -85,7 +85,7 @@ class Particle(object):
         self.age += self.burn_rate
 
         # Accelerate!
-        self.x_vel += 0.05
+        self.x_vel += 0.10
 
         if (self.y_max) < 0 or (self.y_min) > (STRING_COUNT):
             #print(f"Y {self.y_min}:{self.y_max} out of bounds")
