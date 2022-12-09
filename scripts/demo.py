@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import argparse
 import fcntl
 import mmap
@@ -27,8 +29,8 @@ def get_fb(fname="/dev/ledfb"):
     fb_raw = mmap.mmap(ledfb_fd, length=FRAME_SIZE, offset=0)
     # Use numpy to access memory in individual bytes. Note that we only
     # reserve the frame buffer itself.
-    fb = np.frombuffer(fb_raw, np.uint8, FRAME_SIZE)
-    fb_32 = np.frombuffer(fb, np.uint32, FRAME_WORDS)
+    fb = np.frombuffer(fb_raw, np.uint8, count=FRAME_SIZE, offset=0)
+    fb_32 = np.frombuffer(fb, np.uint32, count=FRAME_WORDS, offset=0)
 
     return (ledfb_fd, fb_raw, fb, fb_32)
 
