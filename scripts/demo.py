@@ -13,6 +13,7 @@ import animation.default
 import animation.flame
 import animation.drops
 import animation.solid
+import animation.sequence
 
 def get_regs(fname="/dev/mem"):
     memmap_fd = os.open(fname, os.O_RDWR)
@@ -53,6 +54,9 @@ animation.drops.add_args(parser_drops)
 
 parser_solid = sp.add_parser("solid")
 animation.solid.add_args(parser_solid)
+
+parser_sequence = sp.add_parser("sequence")
+animation.sequence.add_args(parser_sequence)
 
 args = parser.parse_args()
 args.set_args(args)

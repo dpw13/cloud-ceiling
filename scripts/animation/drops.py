@@ -9,7 +9,7 @@ import wand.drawing
 
 from constants import *
 
-N_PARTICLES = 6
+N_PARTICLES = 1
 GROWTH_RATE = 0.05
 BURN_RATE_MIN = GROWTH_RATE*0.8
 BURN_RATE_MAX = GROWTH_RATE*1.5
@@ -106,15 +106,14 @@ def render(frame, fb, fb_32):
             np.copyto(fb, pxl_list, casting='unsafe')
 
     # Reverse every odd line
-    for line in range(1, STRING_COUNT, 2):
-        pxl_from = line*LED_COUNT*BYTES_PER_LED
-        pxl_to = pxl_from + (LED_COUNT-1)*BYTES_PER_LED
-        for row in range(0, LED_COUNT/2):
-            # in-place swap keeping color order
-            for byte in range(0, BYTES_PER_LED):
-                x = fb[pxl_to]
-                fb[pxl_to] = fb[pxl_from]
-                fb[pxl_from] = x
-                pxl_from += 1
-                pxl_to += 1
-            pxl_to -= (2*BYTES_PER_LED-1)
+    #for string_idx in range(1, STRING_COUNT, 2):
+    #    for led_idx in range(0, LED_COUNT//2):
+    #        byte_from = 3*(string_idx + STRING_COUNT*led_idx)
+    #        byte_to = 3*(string_idx + STRING_COUNT*(LED_COUNT-led_idx-1))
+    #        # in-place swap keeping color order
+    #        for byte in range(0, BYTES_PER_LED):
+    #            x = fb[byte_to]
+    #            fb[byte_to] = fb[byte_from]
+    #            fb[byte_from] = x
+    #            byte_from += 1
+    #            byte_to += 1
