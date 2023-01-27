@@ -16,8 +16,8 @@ Y_START_MAX = 2.5
 
 X_MIN_VEL =  0.2
 X_MAX_VEL =  0.4
-Y_MIN_VEL = -0.02
-Y_MAX_VEL =  0.02
+Y_MIN_VEL = -0.04
+Y_MAX_VEL =  0.04
 BURN_RATE_MIN = 0.120
 BURN_RATE_MAX = 0.200
 # This is approximately the radius, not diameter
