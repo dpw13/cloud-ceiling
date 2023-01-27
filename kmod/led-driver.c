@@ -21,14 +21,14 @@ static struct ledfb_struct {
         int frame;
 } ledfb_dev;
 
-#define BUFFER_SIZE 0x2000
+#define BUFFER_SIZE 0x4000
 #define FPGA_FIFO_ADDR 0x1001000UL
 
 static const struct vm_operations_struct mmap_ledfb_ops = {};
 
 static void dma_callback(void *arg)
 {
-        dev_debug(ledfb_dev.dev, "DMA callback\n");
+        dev_dbg(ledfb_dev.dev, "DMA callback\n");
         ledfb_dev.frame++;
 }
 
@@ -101,8 +101,8 @@ static int mmap_ledfb(struct file *filp, struct vm_area_struct *vma)
         }
 
         /* Maximum size is two pages */
-        if (size > 0x2000) {
-                dev_err(ledfb_dev.dev, "Invalid size: %pa", &offset);
+        if (size > BUFFER_SIZE) {
+                dev_err(ledfb_dev.dev, "Invalid size: %zx", size);
                 return -EINVAL;
         }
 
