@@ -1,9 +1,17 @@
-# 
+#
 # Default test animation
 #
 
 from constants import *
 import numpy as np
+
+INTERVAL=32
+
+def add_args(parser):
+    parser.set_defaults(init=init, render=render, set_args=set_args)
+
+def set_args(args):
+    pass
 
 def init():
     pass
@@ -15,7 +23,7 @@ def render(frame, fb, fb_32):
             # Buffer format is (Pixel/String/Color)
             # 0/0/B, 0/0/R, 0/0/G, 0/1/B, 0/1/R, 0/1/G, ...
             # Base index of Pixel/String is 3*Y + STRING_COUNT*3*X = 3*(Y + STRING_COUNT*X)
-            if (led_idx + string_idx + 4*frame) % 8 == 0:
+            if (led_idx + string_idx + INTERVAL*frame) % (INTERVAL*2) == 0:
                 byte_idx = 3*(string_idx + STRING_COUNT*led_idx)
 
                 fb[byte_idx + BLUE] = 0x20

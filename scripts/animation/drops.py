@@ -74,6 +74,12 @@ class Drop(object):
         s = f"x = {self.x:0.2f} y = {self.y:0.2f} radius = {self.radius:0.2f} age = {self.age:0.2f}"
         return s
 
+def add_args(parser):
+    parser.set_defaults(init=init, render=render, set_args=set_args)
+
+def set_args(args):
+    pass
+
 def init():
     for i in range(0, N_PARTICLES):
         particles.append(Drop())

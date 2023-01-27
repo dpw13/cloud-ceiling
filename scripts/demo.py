@@ -12,6 +12,7 @@ from constants import *
 import animation.default
 import animation.flame
 import animation.drops
+import animation.solid
 
 def get_regs(fname="/dev/mem"):
     memmap_fd = os.open(fname, os.O_RDWR)
@@ -35,28 +36,43 @@ def get_fb(fname="/dev/ledfb"):
     return (ledfb_fd, fb_raw, fb, fb_32)
 
 parser = argparse.ArgumentParser(
-                    prog = 'LED Demo')
+                    prog = 'demo.py')
 
-parser.add_argument("animation")
+parser.add_argument("--blank", action="store_true")
+
+sp = parser.add_subparsers(title="animation options")
+
+parser_default = sp.add_parser("default")
+animation.default.add_args(parser_default)
+
+parser_flame = sp.add_parser("flame")
+animation.flame.add_args(parser_flame)
+
+parser_drops = sp.add_parser("drops")
+animation.drops.add_args(parser_drops)
+
+parser_solid = sp.add_parser("solid")
+animation.solid.add_args(parser_solid)
 
 args = parser.parse_args()
+args.set_args(args)
 
 memmap_fd, regs_raw, regs = get_regs()
 empty = regs[FIFO_EMPTY_COUNT_REG]
 print(f"Initial empty count is {empty}")
+print(f"Frame size is {FRAME_SIZE}")
 
 ledfb_fd, fb_raw, fb, fb_32 = get_fb()
 
-anim = getattr(animation, args.animation)
-
-anim.init()
+args.init()
 
 try:
     frame = 0
     while True:
-        anim.render(frame, fb, fb_32)
+        args.render(frame, fb, fb_32)
 
         # Make sure we have room in the FIFO
+        empty = regs[FIFO_EMPTY_COUNT_REG]
         empty = regs[FIFO_EMPTY_COUNT_REG]
         while (empty < 2048):
             time.sleep(0.001)
@@ -65,23 +81,34 @@ try:
 
         # Serialize framebuffer to LEDs
         fcntl.ioctl(ledfb_fd, 0, FRAME_SIZE)
-        #time.sleep(0.004)
+        time.sleep(0.01)
+
+        #empty = regs[FIFO_EMPTY_COUNT_REG]
+        #empty = regs[FIFO_EMPTY_COUNT_REG]
+        #print(f"Empty count after frame {frame} is {empty}")
+
         #status = regs[FIFO_STATUS_REG]
+        #print(f"Status: 0x{status:04x}")
 
         frame += 1
 
 except KeyboardInterrupt:
     print("Exiting...")
     # Give system to finish its last ioctl
-    time.sleep(0.01)
+    time.sleep(0.1)
+
+    empty = regs[FIFO_EMPTY_COUNT_REG]
+    empty = regs[FIFO_EMPTY_COUNT_REG]
+    print(f"Empty count at exit is {empty}")
 
     # Turn off LEDs
-    fb_32.fill(0)
-    time.sleep(0.01)
-    fcntl.ioctl(ledfb_fd, 0, FRAME_SIZE)
-    time.sleep(0.01)
+    if args.blank:
+        fb_32.fill(0)
+        time.sleep(0.01)
+        fcntl.ioctl(ledfb_fd, 0, FRAME_SIZE)
+        time.sleep(0.01)
+
     status = regs[FIFO_STATUS_REG]
-    time.sleep(0.01)
     status = regs[FIFO_STATUS_REG]
     empty = regs[FIFO_EMPTY_COUNT_REG]
 

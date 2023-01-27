@@ -12,7 +12,7 @@ from constants import *
 N_PARTICLES = 15
 
 Y_START_MIN = 0.5
-Y_START_MAX = 2.5
+Y_START_MAX = STRING_COUNT-0.5
 
 X_MIN_VEL =  0.2
 X_MAX_VEL =  0.4
@@ -112,6 +112,12 @@ class Particle(object):
         s = f"x = {self.x:0.2f} dx = {self.x_vel:0.2f} y = {self.y:0.2f} dy = {self.y_vel:0.2f} age = {self.age:0.2f}"
         s += f" size = {self.size:0.2f} x_min:max = {self.x_min}:{self.x_max} y_min:max = {self.y_min}:{self.y_max}"
         return s
+
+def add_args(parser):
+    parser.set_defaults(init=init, render=render, set_args=set_args)
+
+def set_args(args):
+    pass
 
 def init():
     for i in range(0, N_PARTICLES):
