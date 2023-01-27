@@ -21,6 +21,7 @@ static struct ledfb_struct {
         int frame;
 } ledfb_dev;
 
+// The maximum buffer size in bytes
 #define BUFFER_SIZE 0x4000
 #define FPGA_FIFO_ADDR 0x1001000UL
 
@@ -35,6 +36,7 @@ static void dma_callback(void *arg)
 static long ioctl_ledfb(struct file *filp, unsigned int ioctl_num, unsigned long ioctl_param)
 {
         struct dma_async_tx_descriptor *tx;
+        dma_addr_t buf_start, buf_end;
         dma_cookie_t cookie;
 
         dev_dbg(ledfb_dev.dev, "Got ioctl: %u %lu. Frame %d\n", ioctl_num, ioctl_param, ledfb_dev.frame);
@@ -47,27 +49,39 @@ static long ioctl_ledfb(struct file *filp, unsigned int ioctl_num, unsigned long
                 return -EINVAL;
         }
 
-        /* Create tx descriptor */
-        tx = ledfb_dev.chan->device->device_prep_dma_memcpy(
-                ledfb_dev.chan,
-                FPGA_FIFO_ADDR, // destination bus address
-                ledfb_dev.src_handle, // src bus address
-                ledfb_dev.fb_size, // size
-                0); // dma_ctrl_flags
+        buf_start = ledfb_dev.src_handle;
+        buf_end = ledfb_dev.src_handle + ledfb_dev.fb_size;
 
-        if (!tx) {
-                dev_err(ledfb_dev.dev, "Failed to create TX descriptor\n");
-                return -ENXIO;
-        }
+        while (buf_start < buf_end) {
+                /* DMA is only issuing a page at a time? */
+                size_t buf_size = buf_end - buf_start;
+                if (buf_size > 4096)
+                        buf_size = 4096;
 
-        tx->callback = dma_callback;
+                /* Create tx descriptor */
+                tx = ledfb_dev.chan->device->device_prep_dma_memcpy(
+                        ledfb_dev.chan,
+                        FPGA_FIFO_ADDR, // destination bus address
+                        buf_start, // src bus address
+                        buf_size, // size
+                        0); // dma_ctrl_flags
 
-        /* I can't tell whether tx is consumed here or not */
-        cookie = tx->tx_submit(tx);
+                if (!tx) {
+                        dev_err(ledfb_dev.dev, "Failed to create TX descriptor\n");
+                        return -ENXIO;
+                }
 
-        if (dma_submit_error(cookie)) {
-                dev_err(ledfb_dev.dev, "Failed to submit TX descriptor");
-                return -EINVAL;
+                tx->callback = dma_callback;
+
+                /* I can't tell whether tx is consumed here or not */
+                cookie = tx->tx_submit(tx);
+
+                if (dma_submit_error(cookie)) {
+                        dev_err(ledfb_dev.dev, "Failed to submit TX descriptor");
+                        return -EINVAL;
+                }
+
+                buf_start += buf_size;
         }
         dma_async_issue_pending(ledfb_dev.chan);
 
