@@ -51,9 +51,9 @@ set_io led_sdi[1] 9  # PMOD4 B2
 set_io led_sdi[2] 15 # PMOD4 B3
 set_io led_sdi[3] 12 # PMOD4 B4
 set_io led_sdi[11] 4  # PMOD4 A1
-set_io led_sdi[8] 8  # PMOD4 A2
+set_io led_sdi[10] 8  # PMOD4 A2
 set_io led_sdi[9] 10 # PMOD4 A3
-set_io led_sdi[10] 11 # PMOD4 A4
+set_io led_sdi[8] 11 # PMOD4 A4
 
 set_io led_sdi[4] 107 # PMOD3 B1
 set_io led_sdi[5] 112 # PMOD3 B2
