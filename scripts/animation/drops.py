@@ -104,3 +104,17 @@ def render(frame, fb, fb_32):
             # Copy to framebuffer. Ideally this additional copy wouldn't be necessary
             # export_pixels returns a list of int32 and our destination buffer is a list of u8
             np.copyto(fb, pxl_list, casting='unsafe')
+
+    # Reverse every odd line
+    for line in range(1, STRING_COUNT, 2):
+        pxl_from = line*LED_COUNT*BYTES_PER_LED
+        pxl_to = pxl_from + (LED_COUNT-1)*BYTES_PER_LED
+        for row in range(0, LED_COUNT/2):
+            # in-place swap keeping color order
+            for byte in range(0, BYTES_PER_LED):
+                x = fb[pxl_to]
+                fb[pxl_to] = fb[pxl_from]
+                fb[pxl_from] = x
+                pxl_from += 1
+                pxl_to += 1
+            pxl_to -= (2*BYTES_PER_LED-1)
