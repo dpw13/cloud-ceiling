@@ -40,6 +40,7 @@ parser = argparse.ArgumentParser(
                     prog = 'demo.py')
 
 parser.add_argument("--blank", action="store_true")
+parser.add_argument("--once", action="store_true")
 
 sp = parser.add_subparsers(title="animation options")
 
@@ -95,6 +96,9 @@ try:
         #print(f"Status: 0x{status:04x}")
 
         frame += 1
+
+        if args.once:
+            break
 
 except KeyboardInterrupt:
     print("Exiting...")

@@ -9,12 +9,14 @@ import wand.drawing
 
 from constants import *
 
-N_PARTICLES = 12
+N_PARTICLES = 8
 GROWTH_RATE = 0.2
 BURN_RATE_MIN = GROWTH_RATE*0.8
 BURN_RATE_MAX = GROWTH_RATE*1.5
 MAX_AGE = 8.0
 THICKNESS = 0.5
+
+X_SCALE = 2.15
 
 particles = []
 
@@ -33,7 +35,7 @@ R_FP = np.array([m[3] for m in COLOR_MAP], dtype=np.uint8)
 
 BG = wand.color.Color('black')
 # Transparent fill
-FILL = wand.color.Color("rgb(0, 0, 0, 0)")
+FILL = wand.color.Color('transparent')
 
 class Drop(object):
     def __init__(self):
@@ -70,7 +72,8 @@ class Drop(object):
         draw.stroke_color = wand.color.Color(f"#{r:02x}{g:02x}{b:02x}")
 
         # Don't forget to transpose x and y coordinates in draw calls
-        draw.circle((self.y, self.x), (self.y + self.radius, self.x))
+        #draw.circle((self.y, self.x), (self.y + self.radius, self.x))
+        draw.ellipse((self.y, self.x), [self.radius, self.radius*X_SCALE])
 
     def __str__(self):
         s = f"x = {self.x:0.2f} y = {self.y:0.2f} radius = {self.radius:0.2f} age = {self.age:0.2f}"
