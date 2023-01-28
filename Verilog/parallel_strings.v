@@ -182,6 +182,16 @@ module parallel_strings #(
         end
     end
 
+    reg shift_reg_sel;
+    reg shift_reg_sel_q;
+    reg shift_reg_sel_qq;
+    always @(posedge clk)
+    begin
+        shift_reg_sel <= (fifo_shift_count == 1);
+        shift_reg_sel_q <= shift_reg_sel;
+        shift_reg_sel_qq <= shift_reg_sel_q;
+    end
+
     reg next_word_completes_pixel_q;
     reg next_word_completes_pixel_qq;
     // Active string needs to be delayed to be coherent with the data to drive data valid properly
@@ -221,7 +231,7 @@ module parallel_strings #(
     end
 
     wire [23:0] pxl_data;
-    assign pxl_data = (fifo_shift_count == 0) ? fifo_shift_reg[23:0] : fifo_shift_reg[31:8];
+    assign pxl_data = shift_reg_sel_qq ? fifo_shift_reg[31:8] : fifo_shift_reg[24:0];
 
     genvar string;
     generate

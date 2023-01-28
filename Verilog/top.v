@@ -25,6 +25,8 @@ module top(
 	localparam FIFO_ADDR_WIDTH = 13;
 	localparam FIFO_DATA_WIDTH = 16;
 
+	localparam N_STRINGS = 12;
+
 	wire clk_20;
 	wire pll_locked;
 
@@ -264,7 +266,7 @@ module top(
 
 	// String drivers
 	parallel_strings #(
-		.N_STRINGS(12),
+		.N_STRINGS(N_STRINGS),
 		.N_LEDS_PER_STRING(236),
 		.FIFO_ADDR_WIDTH(FIFO_ADDR_WIDTH),
 		.FIFO_DATA_WIDTH(FIFO_DATA_WIDTH)
@@ -278,7 +280,7 @@ module top(
 
 		.h_blank_in(h_blank),
 		.string_active(led[0]),
-		.led_sdi(led_sdi)
+		.led_sdi(led_sdi[N_STRINGS-1:0])
 	);
 
 endmodule

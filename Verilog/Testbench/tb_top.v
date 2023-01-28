@@ -11,7 +11,7 @@ parameter PERIOD_FCLK = 10; // 50 MHz, producing 25 MHz GPMC bus
 parameter GPMC_TCO = 0; // Delay data outputs on GPMC bus after GPMC clock
 
 localparam N_LEDS_PER_STRING = 8;
-localparam N_STRINGS = 2;
+localparam N_STRINGS = 5;
 localparam N_FRAMES = 3;
 
 reg glbl_reset;
@@ -30,7 +30,7 @@ reg         gpmc_csn1;
 reg         gpmc_wein;
 reg         gpmc_oen;
 
-wire [1:0]  led_sdi;
+wire [22:0] led_sdi;
 
 assign gpmc_ad_in = gpmc_ad;
 assign gpmc_ad = (gpmc_oen) ? gpmc_ad_out : 16'bZ;
@@ -60,14 +60,6 @@ always @(posedge gpmc_fclk) gpmc_clk <= (gpmc_clk_en) ? ~gpmc_clk : 1'b0;
 // Store expected frame data
 reg [7:0] frame_data[N_FRAMES-1:0][N_LEDS_PER_STRING*N_STRINGS*3-1:0];
 
-// WS2812B model
-realtime sdi_rise, sdi_fall;
-realtime sdi_high, sdi_low;
-always @ (negedge led_sdi[0])
-begin
-    sdi_fall <= $realtime();
-end
-
 localparam T0H_min = 400-150;
 localparam T0H_max = 400+150;
 localparam T1H_min = 800-150;
@@ -77,47 +69,61 @@ localparam T0L_max = 850+150;
 localparam T1L_min = 450-150;
 localparam T1L_max = 450+150;
 
-reg [23:0] led_data = 0;
-reg [23:0] led_expected = 0;
-integer bit_count = 0;
-integer pixel_count = 0;
-integer frame_count = -1;
-
-always @ (posedge led_sdi[0])
-begin
-    sdi_high = sdi_fall - sdi_rise;
-    sdi_low = $realtime() - sdi_fall;
-    sdi_rise = $realtime();
-
-    if (sdi_low > 50_000) begin
-        // We don't care about high time in this case
-        $display("HBLANK, start frame %d", frame_count + 1);
-        led_data = 0;
-        bit_count = 0;
-        pixel_count = 0;
-        frame_count = frame_count + 1;
-    end else if (sdi_high > T0H_min && sdi_high < T0H_max && sdi_low > T0L_min && sdi_low < T0L_max) begin
-        // shift up
-        led_data = { led_data[22:0], 1'b0 };
-        bit_count = bit_count + 1;
-    end else if (sdi_high > T1H_min && sdi_high < T1H_max && sdi_low > T1L_min && sdi_low < T1L_max) begin
-        led_data = { led_data[22:0], 1'b1 };
-        bit_count = bit_count + 1;
-    end else if ($realtime > 0) begin
-        $display("ERROR: Invalid bit time at %t ns: %t high %t low", sdi_rise, sdi_high, sdi_low);
+genvar string;
+for (string=0; string < N_STRINGS; string = string+1) begin
+    // WS2812B model
+    realtime sdi_rise, sdi_fall;
+    realtime sdi_high, sdi_low;
+    always @ (negedge led_sdi[string])
+    begin
+        sdi_fall <= $realtime();
     end
 
-    if (bit_count == 24) begin
-        led_expected = { frame_data[frame_count][6*pixel_count+2], frame_data[frame_count][6*pixel_count+1], frame_data[frame_count][6*pixel_count+0] };
+    reg [23:0] led_data = 0;
+    reg [23:0] led_expected = 0;
+    integer bit_count = 0;
+    integer pixel_count = 0;
+    integer frame_count = -1;
 
-        if (led_data != led_expected) begin
-            $display("ERROR: Data mismatch frame %d pixel %d: got 0x%06x expected 0x%06x", frame_count, pixel_count, led_data, led_expected);
-            $finish();
-        end else begin
-            $display("Data MATCH frame %d pixel %d: got 0x%06x expected 0x%06x", frame_count, pixel_count, led_data, led_expected);
+    always @ (posedge led_sdi[string])
+    begin
+        sdi_high = sdi_fall - sdi_rise;
+        sdi_low = $realtime() - sdi_fall;
+        sdi_rise = $realtime();
+
+        if (sdi_low > 50_000) begin
+            // We don't care about high time in this case
+            $display("HBLANK string %d, start frame %d", string, frame_count + 1);
+            led_data = 0;
+            bit_count = 0;
+            pixel_count = 0;
+            frame_count = frame_count + 1;
+        end else if (sdi_high > T0H_min && sdi_high < T0H_max && sdi_low > T0L_min && sdi_low < T0L_max) begin
+            // shift up
+            led_data = { led_data[22:0], 1'b0 };
+            bit_count = bit_count + 1;
+        end else if (sdi_high > T1H_min && sdi_high < T1H_max && sdi_low > T1L_min && sdi_low < T1L_max) begin
+            led_data = { led_data[22:0], 1'b1 };
+            bit_count = bit_count + 1;
+        end else if ($realtime > 0) begin
+            $display("ERROR: Invalid bit time on string %d at %t ns: %t high %t low", string, sdi_rise, sdi_high, sdi_low);
         end
-        pixel_count = pixel_count + 1;
-        bit_count = 0;
+
+        if (bit_count == 24) begin
+            led_expected = { 
+                frame_data[frame_count][3*(N_STRINGS*pixel_count+string)+2],
+                frame_data[frame_count][3*(N_STRINGS*pixel_count+string)+1],
+                frame_data[frame_count][3*(N_STRINGS*pixel_count+string)+0] };
+
+            if (led_data != led_expected) begin
+                $display("ERROR: Data mismatch frame %d string %d pixel %d: got 0x%06x expected 0x%06x", frame_count, string, pixel_count, led_data, led_expected);
+                $finish();
+            end else begin
+                $display("Data MATCH frame %d string %d pixel %d: got 0x%06x expected 0x%06x", frame_count, string, pixel_count, led_data, led_expected);
+            end
+            pixel_count = pixel_count + 1;
+            bit_count = 0;
+        end
     end
 end
 
