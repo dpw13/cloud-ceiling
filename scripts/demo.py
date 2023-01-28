@@ -116,13 +116,13 @@ except KeyboardInterrupt:
         fcntl.ioctl(ledfb_fd, 0, FRAME_SIZE)
         time.sleep(0.01)
 
+finally:
     status = regs[FIFO_STATUS_REG]
     status = regs[FIFO_STATUS_REG]
     empty = regs[FIFO_EMPTY_COUNT_REG]
 
     print(f"FIFO status: 0x{status:04x} empty: {empty}")
 
-finally:
     fb_raw.close()
     os.close(ledfb_fd)
     regs_raw.close()
