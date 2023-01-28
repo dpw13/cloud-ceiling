@@ -9,11 +9,11 @@ import wand.drawing
 
 from constants import *
 
-N_PARTICLES = 1
-GROWTH_RATE = 0.05
+N_PARTICLES = 12
+GROWTH_RATE = 0.2
 BURN_RATE_MIN = GROWTH_RATE*0.8
 BURN_RATE_MAX = GROWTH_RATE*1.5
-MAX_AGE = 6.0
+MAX_AGE = 8.0
 THICKNESS = 0.5
 
 particles = []
@@ -23,7 +23,7 @@ COLOR_MAP = [
     # [ age, b, g, r ]
     [ 0.0, 0x40, 0x00, 0x00 ], # blue
     [ 4.0, 0x10, 0x20, 0x00 ], # soft green
-    [ 6.0, 0x00, 0x00, 0x00 ], # black
+    [ 8.0, 0x00, 0x00, 0x00 ], # black
 ]
 
 AGE_XP = np.array([m[0] for m in COLOR_MAP])
@@ -112,8 +112,9 @@ def render(frame, fb, fb_32):
                 fb[byte_idx+1] = pxl_list[byte_idx*2+1]
                 fb[byte_idx+2] = pxl_list[byte_idx*2+2]
             dst_byte_idx = BYTES_PER_LED*LED_COUNT*STRING_COUNT//2
-            for string_idx in range(STRING_COUNT-1, -1, -1):
-                for led_idx in range(1, LED_COUNT, 2):
+            for led_idx in range(LED_COUNT-1, -1, -1):
+                for string_idx in range(1, STRING_COUNT, 2):
+                    #print(f"dest[{dst_byte_idx}] = ({string_idx}, {led_idx})")
                     src_byte_idx = BYTES_PER_LED*(string_idx + STRING_COUNT*led_idx)
                     fb[dst_byte_idx+0] = pxl_list[src_byte_idx+0]
                     fb[dst_byte_idx+1] = pxl_list[src_byte_idx+1]
