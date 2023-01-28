@@ -32,6 +32,8 @@ G_FP = np.array([m[2] for m in COLOR_MAP], dtype=np.uint8)
 R_FP = np.array([m[3] for m in COLOR_MAP], dtype=np.uint8)
 
 BG = wand.color.Color('black')
+# Transparent fill
+FILL = wand.color.Color("rgb(0, 0, 0, 0)")
 
 class Drop(object):
     def __init__(self):
@@ -89,7 +91,7 @@ def render(frame, fb, fb_32):
         p.update()
 
     with wand.drawing.Drawing() as draw:
-        draw.fill_color = BG
+        draw.fill_color = FILL
         draw.stroke_width = THICKNESS
         for i, p in enumerate(particles):
             p.render(draw)
