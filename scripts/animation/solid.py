@@ -3,6 +3,7 @@
 #
 
 from constants import *
+import math
 import numpy as np
 import wand.image
 import wand.drawing
@@ -13,13 +14,23 @@ def add_args(parser):
     parser.add_argument('--red', '-r', type=int, default=0)
     parser.add_argument('--blue', '-b', type=int, default=0)
     parser.add_argument('--green', '-g', type=int, default=0)
+
+    parser.add_argument('--temp', '-t', type=float, default=0)
+    parser.add_argument('--intensity', '-i', type=float, default=32)
     parser.set_defaults(init=init, render=render, set_args=set_args)
 
 def set_args(args):
     global BG
-    color_str = f"rgb({args.red},{args.blue},{args.green})"
+    if args.temp:
+        k = 5.352*pow(math.e, -0.001*args.temp)
+        r = int(round(args.intensity))
+        g = int(round(args.intensity*(1.0 - k/2)))
+        b = int(round(args.intensity*(1.0 - k)))
+        color_str = f"rgb({r},{g},{b})"
+    else:
+        color_str = f"rgb({args.red},{args.green},{args.blue})"
     print(f"Setting color to {color_str}")
-    BG = wand.color.Color(f"rgb({args.red},{args.blue},{args.green})")
+    BG = wand.color.Color(color_str)
 
 def init():
     pass
