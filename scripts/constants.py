@@ -23,3 +23,6 @@ FRAME_WORDS = FRAME_SIZE >> 2
 BLUE = 0
 RED = 1
 GREEN = 2
+
+# The ratio of Y distance to X distance. Multiply X axes by this to square up images
+X_SCALE = 2.15
