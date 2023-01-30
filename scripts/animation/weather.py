@@ -11,29 +11,31 @@ SKY_BG_MAP = [
     # Format:
     # [ age, r, g, b ]
     [  0.0, 0x01, 0x01, 0x06 ], # "Cetacean Blue"
-    [  4.0, 0x01, 0x02, 0x09 ],
-    [  6.0, 0x07, 0x05, 0x0C ], # "Regalia"
+    [  6.0, 0x01, 0x02, 0x09 ],
+    [  6.5, 0x07, 0x05, 0x0C ], # "Regalia"
     [  7.0, 0x10, 0x09, 0x0B ], # dusty rose
-    [  8.0, 0x13, 0x11, 0x0C ], # straw yellow
-    [  8.5, 0x17, 0x16, 0x13 ], # pale cream
-    [  9.0, 0x17, 0x18, 0x19 ], # light gray-blue
-    [  9.5, 0x19, 0x1D, 0x22 ], # medium blue
-    [ 10.0, 0x12, 0x23, 0x2B ], # medium blue
-    [ 11.0, 0x00, 0x27, 0x39 ], # deep day blue
-    [ 16.0, 0x12, 0x23, 0x2B ], # medium blue
-    [ 17.0, 0x1F, 0x1B, 0x0E ], # "Shandy"
+    [  7.5, 0x13, 0x11, 0x0C ], # straw yellow
+    [  8.0, 0x17, 0x16, 0x13 ], # pale cream
+    [  8.5, 0x17, 0x18, 0x19 ], # light gray-blue
+    [  9.0, 0x19, 0x1D, 0x22 ], # medium blue
+    [ 10.0, 0x0B, 0x26, 0x2F ], # medium blue
+    [ 10.5, 0x04, 0x1F, 0x3D ], # deep day blue
+    [ 16.5, 0x04, 0x1F, 0x3D ], # deep day blue
+    [ 17.0, 0x0B, 0x26, 0x2F ], # medium blue
+    [ 17.5, 0x1F, 0x1B, 0x0E ], # "Shandy"
     [ 18.0, 0x21, 0x14, 0x0B ], # "Sandy Brown"
     [ 18.5, 0x1C, 0x0A, 0x09 ], # "Sunset Orange"
     [ 19.0, 0x0C, 0x09, 0x0F ], # "English Violet"
-    [ 20.0, 0x04, 0x07, 0x0E ], # "Space Cadet"
-    [ 21.0, 0x01, 0x03, 0x08 ], # "Maastricht Blue"
+    [ 19.5, 0x04, 0x07, 0x0E ], # "Space Cadet"
+    [ 20.0, 0x01, 0x03, 0x08 ], # "Maastricht Blue"
+    [ 21.0, 0x01, 0x01, 0x06 ], # "Cetacean Blue"
     [ 24.0, 0x01, 0x01, 0x06 ], # "Cetacean Blue"
 ]
 
 TIME_XP = np.array([m[0] for m in SKY_BG_MAP])
-B_BG = np.array([m[1] for m in SKY_BG_MAP], dtype=np.uint8)
+R_BG = np.array([m[1] for m in SKY_BG_MAP], dtype=np.uint8)
 G_BG = np.array([m[2] for m in SKY_BG_MAP], dtype=np.uint8)
-R_BG = np.array([m[3] for m in SKY_BG_MAP], dtype=np.uint8)
+B_BG = np.array([m[3] for m in SKY_BG_MAP], dtype=np.uint8)
 
 def add_args(parser):
     parser.set_defaults(init=init, render=render, set_args=set_args)
