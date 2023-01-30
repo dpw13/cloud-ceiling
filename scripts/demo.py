@@ -14,6 +14,7 @@ import animation.flame
 import animation.drops
 import animation.solid
 import animation.sequence
+import animation.weather
 
 def get_regs(fname="/dev/mem"):
     memmap_fd = os.open(fname, os.O_RDWR)
@@ -58,6 +59,9 @@ animation.solid.add_args(parser_solid)
 
 parser_sequence = sp.add_parser("sequence")
 animation.sequence.add_args(parser_sequence)
+
+parser_weather = sp.add_parser("weather")
+animation.weather.add_args(parser_weather)
 
 args = parser.parse_args()
 args.set_args(args)
