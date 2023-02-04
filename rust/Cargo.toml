@@ -7,4 +7,5 @@ edition = "2021"
 
 [dependencies]
 memmap = "0.7.0"
+nix = { version = "0.26.2", features = ["ioctl"], default-features = false }
 volatile = "<0.3.0"
