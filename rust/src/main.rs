@@ -75,24 +75,23 @@ impl LedDisplay {
                         .offset(FPGA_REGS_BASE)
                         .len(FPGA_REGS_SIZE)
                         .map_mut(&f_mem)
-                        .unwrap()
+                        .expect("Failed to mmap register region")
         });
 
-        let ptr = mmap_regs.borrow_mut().as_mut_ptr();
-        let regs = ptr as *mut FpgaRegisters;
+        let regs = mmap_regs.borrow_mut().as_mut_ptr() as *mut FpgaRegisters;
 
         // Memory map the ledfb
         let f_fb = fs::OpenOptions::new().read(true)
                                     .write(true)
                                     .open("/dev/ledfb")
-                                    .unwrap();
+                                    .expect("Could not open LED framebuffer device");
 
         let mmap_fb = unsafe {
             MmapOptions::new()
                         .offset(0)
                         .len(FIFO_DATA_SIZE)
                         .map_mut(&f_fb)
-                        .unwrap()
+                        .expect("Failed to mmap framebuffer")
         };
 
         let fb_cell = RefCell::new(mmap_fb);
@@ -118,16 +117,13 @@ impl LedDisplay {
 
         let now = Instant::now();
         while self.empty_count() < FRAME_SIZE_WORDS {
-            sleep(Duration::from_millis(1));
+            sleep(Duration::from_micros(50));
         }
         self.wait_time.set(self.wait_time.get() + now.elapsed());
 
         unsafe {
-            let res = flush_buffer(fd, FRAME_SIZE_BYTES as i32);
-            match res {
-                Err(err) => panic!("IOCTL error: {:?}", err),
-                Ok(_) => ()
-            };
+            flush_buffer(fd, FRAME_SIZE_BYTES as i32)
+                .expect("IOCTL error");
         }
     }
 }
@@ -143,40 +139,30 @@ fn main() {
     println!("Starting empty count: {}", disp.empty_count());
 
     let mut mut_fb = disp.fb_cell.borrow_mut();
-    let fb = match mut_fb.get_mut(0..FRAME_SIZE_BYTES) {
-        None => panic!("Could not get framebuffer reference to {} B", FRAME_SIZE_BYTES),
-        Some(x) => x,
-    };
+    let fb = mut_fb.get_mut(0..FRAME_SIZE_BYTES)
+              .expect("Could not get framebuffer slice");
 
     let mut wand = MagickWand::new();
     let mut draw = DrawingWand::new();
 
     let mut bg = PixelWand::new();
-    match bg.set_color("rgb(0,0,0)") {
-        Err(err) => panic!("Could not set color: {:?}", err),
-        Ok(_) => (),
-    };
+    bg.set_color("rgb(0,0,0)").expect("Could not set color");
 
     let mut draw_time = Duration::from_millis(0);
     let mut render_time = Duration::from_millis(0);
     let mut copy_time = Duration::from_millis(0);
 
     let now = Instant::now();
-    for frame in 0..99 {
+    for frame in 0..100 {
         let r = (frame + 0) % 24;
         let b = (frame + 8) % 24;
         let g = (frame + 16) % 24;
         let color_str = format!("rgb({},{},{})", r, b, g);
-        match bg.set_color(&color_str) {
-            Err(err) => panic!("Could not set color: {:?}", err),
-            Ok(_) => (),
-        };
+        bg.set_color(&color_str).expect("Could not set color");
 
         // Create new image. There isn't a good way to clear the existing image, so just create a new one.
-        match wand.new_image(STRING_COUNT as usize, LED_COUNT as usize, &bg) {
-            Err(err) => panic!("Could create new image: {:?}", err),
-            Ok(_) => (),
-        }
+        wand.new_image(STRING_COUNT as usize, LED_COUNT as usize, &bg)
+            .expect("Could create new image");
 
         // the `clear` methods are marked private. We do this ugly hack to call the actual
         // bound clear function on the internal struct (which fortunately is public).
@@ -186,22 +172,24 @@ fn main() {
         draw.set_fill_color(&bg);
         draw.draw_rectangle(0.0, 0.0, 1.0, 1.0);
 
+        // Make sure the last flush is really going through
+        disp.empty_count();
+
         // Render
         let draw_start = Instant::now();
-        match wand.draw_image(&draw) {
-            Err(err) => panic!("Could not draw image: {:?}", err),
-            Ok(_) => (),
-        };
+        wand.draw_image(&draw).expect("Could not draw image");
+
+        disp.empty_count();
 
         // Export pixels in framebuffer format
         let export_start = Instant::now();
-        let img_data = &match wand.export_image_pixels(0, 0, STRING_COUNT as usize, LED_COUNT as usize, "BRG") {
-            None => panic!("Could not export pixels"),
-            Some(vec) => vec,
-        };
+        let img_data = wand.export_image_pixels(0, 0, STRING_COUNT as usize, LED_COUNT as usize, "BRG")
+                            .expect("Could not export pixels");
+        disp.empty_count();
+
         let copy_start = Instant::now();
         // Copy to kernel buffer
-        fb.copy_from_slice(img_data);
+        fb.copy_from_slice(&img_data);
         let copy_end = Instant::now();
 
         draw_time += export_start - draw_start;
@@ -225,7 +213,7 @@ fn main() {
     sleep(Duration::from_millis(5));
 
     while disp.empty_count() < 8000 {
-        sleep(Duration::from_millis(1));
+        sleep(Duration::from_micros(100));
     }
     println!("Ending empty count: {}", disp.empty_count());
 }
