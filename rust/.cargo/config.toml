@@ -1,0 +1,8 @@
+[target.armv7-unknown-linux-gnueabihf]
+linker = "arm-unknown-linux-gnueabihf-gcc"
+rustflags = [
+	"-C", "link-args=-Wl,-rpath-link,/home/dwagner/Documents/sysroots/beaglebone/lib/arm-linux-gnueabihf",
+	"-C", "link-args=-Wl,-rpath-link,/home/dwagner/Documents/sysroots/beaglebone/usr/lib/arm-linux-gnueabihf"]
+
+[build]
+target = "armv7-unknown-linux-gnueabihf"
