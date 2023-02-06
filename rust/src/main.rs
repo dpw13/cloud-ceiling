@@ -218,6 +218,12 @@ fn main() {
     println!("100 frames in {:?}. Spent {:?} in flush.", now.elapsed(), disp.wait_time.get());
     println!("Spent {:?} in draw, {:?} in export, {:?} in copy", draw_time, render_time, copy_time);
 
+    // Blank
+    mut_fb.fill(0);
+    disp.flush();
+    // Wait for DMA to finish. Otherwise the last blank frame doesn't get flushed.
+    sleep(Duration::from_millis(5));
+
     while disp.empty_count() < 8000 {
         sleep(Duration::from_millis(1));
     }
