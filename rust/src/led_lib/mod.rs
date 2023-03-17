@@ -8,7 +8,7 @@ use memmap::{MmapMut, MmapOptions};
 use nix::ioctl_write_int_bad;
 use volatile::Volatile;
 
-use super::constants;
+use crate::constants;
 
 pub struct LedDisplay {
     /*
