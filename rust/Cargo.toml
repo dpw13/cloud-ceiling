@@ -5,6 +5,10 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+# Don't forget to 
+# export PKG_CONFIG_SYSROOT_DIR=/home/dwagner/Documents/sysroots/beaglebone
+# export PATH=$PATH:/home/dwagner/x-tools/arm-unknown-linux-gnueabihf/bin
+
 [dependencies]
 magick_rust = "0.17.0"
 memmap = "0.7.0"
