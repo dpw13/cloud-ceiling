@@ -1,3 +1,4 @@
+use std::cell::{RefMut};
 use std::time::{Duration, Instant};
 use std::thread::sleep;
 
@@ -5,11 +6,15 @@ use magick_rust::{magick_wand_genesis};
 
 use animations::strobe::Strobe;
 use animations::common::Renderable;
-use led_lib::LedDisplay;
+use display::LedDisplay;
 
 mod constants;
-mod led_lib;
+mod display;
 mod animations;
+
+fn render<T: Renderable>(frame: i32, fb: &mut RefMut<[u8]>, anim: &mut T) {
+    anim.render(frame, fb);
+}
 
 fn main() {
     // Initialize magick-wand
@@ -21,16 +26,14 @@ fn main() {
     println!("FPGA ID: 0x{:x}", id);
     println!("Starting empty count: {}", disp.empty_count());
 
-    let mut mut_fb = disp.fb_cell.borrow_mut();
-    let fb = mut_fb.get_mut(0..constants::FRAME_SIZE_BYTES)
-              .expect("Could not get framebuffer slice");
+    let mut fb = disp.borrow_fb();
 
     let mut anim = Strobe::new();
 
     let now = Instant::now();
-    for frame in 0..100 {
-        anim.render(frame, fb);
 
+    for frame in 0..100 {
+        render(frame, &mut fb, &mut anim);
         // Call ioctl to DMA to hardware
         disp.flush();
     }
@@ -38,7 +41,7 @@ fn main() {
     println!("100 frames in {:?}. Spent {:?} in flush.", now.elapsed(), disp.wait_time.get());
 
     // Blank
-    mut_fb.fill(0);
+    fb.fill(0);
     disp.flush();
     // Wait for DMA to finish. Otherwise the last blank frame doesn't get flushed.
     sleep(Duration::from_millis(5));

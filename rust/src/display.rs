@@ -1,4 +1,4 @@
-use std::cell::{Cell, RefCell};
+use std::cell::{Cell, RefCell, RefMut};
 use std::fs;
 use std::fs::File;
 use std::os::fd::{AsRawFd};
@@ -86,6 +86,16 @@ impl LedDisplay {
         let wait_time = Cell::new(Duration::from_millis(0));
 
         LedDisplay {mmap_regs, regs, f_fb, fb_cell, wait_time}
+    }
+
+    // MmapMut has same lifetime as LedDisplay
+    pub fn borrow_fb<'a>(&'a self) -> RefMut<[u8]> {
+        let mut_fb = self.fb_cell.borrow_mut();
+        let (begin, mut _end) = 
+            RefMut::map_split(mut_fb, 
+                |slice| slice.split_at_mut(constants::FRAME_SIZE_BYTES));
+
+        begin
     }
 
     pub fn read_id(&self) -> u16 {
