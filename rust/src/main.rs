@@ -30,17 +30,20 @@ fn main() {
     let mut fb = disp.borrow_fb();
     fb.fill(0);
 
+    // Config
+    let frame_cnt = 10000;
+
     let mut anim = Waves::new();
 
     let now = Instant::now();
 
-    for frame in 0..10000 {
+    for frame in 0..frame_cnt {
         render(frame as u32, &mut fb, &mut anim);
         // Call ioctl to DMA to hardware
         disp.flush();
     }
 
-    println!("100 frames in {:?}. Spent {:?} in flush.", now.elapsed(), disp.wait_time.get());
+    println!("{framecnt} frames in {:?}. Spent {:?} in flush.", now.elapsed(), disp.wait_time.get());
 
     // Blank
     fb.fill(0);

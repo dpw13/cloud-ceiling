@@ -12,6 +12,8 @@ pub const BYTES_PER_LED: usize = 3;
 pub const FRAME_SIZE_BYTES: usize = (PIXEL_COUNT*BYTES_PER_LED) as usize;
 pub const FRAME_SIZE_WORDS: usize = FRAME_SIZE_BYTES / 2;
 
+// The ratio of Y distance to X distance. Multiply X axes by this to square up images
+pub const X_SCALE: f32 = 1.0/2.15;
 /*
  * This returns the base index of the first color associated with these
  * logical position in the image.

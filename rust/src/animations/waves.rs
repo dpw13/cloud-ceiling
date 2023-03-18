@@ -13,21 +13,23 @@ pub struct ColorPoint {
 
 pub struct Waves {
     color_map: [ColorPoint; COLOR_MAP_POINTS],
-    phase_params: [f32; 4],
+    phase_coeffs: [f32; 4],
+    phase_offsets: [f32; 2],
 }
 
 impl Waves {
     pub fn new() -> Self {
         // Color format is framebuffer native, [B, G, R]
         let color_map = [
-            ColorPoint {val:-1.0, color: [32,  0,  0] },
-            ColorPoint {val: 0.0, color: [ 0, 32,  0] },
-            ColorPoint {val: 1.0, color: [ 0,  0, 32] },
+            ColorPoint {val:-1.00001, color: [32,  0,  0] },
+            ColorPoint {val: 0.00000, color: [ 0, 32,  0] },
+            ColorPoint {val: 1.00001, color: [ 0,  0, 32] },
         ];
 
-        let phase_params: [f32; 4] = [0.07, 0.03, 0.04, 0.01];
+        let phase_coeffs: [f32; 4] = [-0.15, 0.00, 0.00, 0.20];
+        let phase_offsets = [58.0, 12.0]; // x, y
 
-        Self {color_map, phase_params}
+        Self {color_map, phase_coeffs, phase_offsets}
     }
 }
 
@@ -37,18 +39,25 @@ fn dot(a: &[f32], b: &[f32]) -> f32 {
 
 impl Renderable for Waves {
     fn render(&mut self, frame: u32, fb: &mut RefMut<[u8]>) {
+        let frame_f32 = frame as f32;
 
         // calculate phase at each point
         // This array is an LED_COUNT array of STRING_COUNT f32s. This is the
         // same order as the framebuffer.
         let mut color_index = [[0.0; constants::STRING_COUNT]; constants::LED_COUNT];
         for (x, row) in color_index.iter_mut().enumerate() {
+            let xo = constants::X_SCALE*(x as f32 - self.phase_offsets[0]);
+            let xo2 = xo.powi(2);
             for (y, p) in row.iter_mut().enumerate() {
-                *p = dot(&self.phase_params, &[frame as f32, x as f32, y as f32, (x*y) as f32]);
+                let yo = y as f32 - self.phase_offsets[1];
+                let r = f32::sqrt(xo2 + yo.powi(2));
+                //print!("{x},{y} rsq = {rsq}\n");
+
+                *p = dot(&self.phase_coeffs, &[frame_f32, xo, yo, r]);
             }
         }
 
-        // calculate sine of each phase
+        // calculate cosine of each phase, mapping an arbitrary f32 onto [-1.0, 1.0]
         for (_, row) in color_index.iter_mut().enumerate() {
             for (_, p) in row.iter_mut().enumerate() {
                 *p = p.cos();
@@ -67,11 +76,10 @@ impl Renderable for Waves {
 
         for (x, row) in color_index.iter_mut().enumerate() {
             for (y, p) in row.iter_mut().enumerate() {
-                let mut i = 0;
                 // Find which pair of points this value falls between
-                while i < COLOR_MAP_POINTS-2 && *p >= self.color_map[i+1].val {
-                    i += 1;
-                }
+                //print!("{x},{y} {p}\n");
+                let i = self.color_map.iter().position(|x| *p <= x.val).expect("{p} is outside of map limits") - 1;
+
                 // Scale the independent variable
                 //print!("Using index {i}, original value is {p}\n");
                 let alpha: f32 = (*p - self.color_map[i].val)/(self.color_map[i+1].val - self.color_map[i].val);
