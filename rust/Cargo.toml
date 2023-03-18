@@ -10,7 +10,9 @@ edition = "2021"
 # export PATH=$PATH:/home/dwagner/x-tools/arm-unknown-linux-gnueabihf/bin
 
 [dependencies]
+interpolation = "0.2.0"
 magick_rust = "0.17.0"
 memmap = "0.7.0"
 nix = { version = "0.26.2", features = ["ioctl"], default-features = false }
+num-traits = "0.2.15"
 volatile = "<0.3.0"

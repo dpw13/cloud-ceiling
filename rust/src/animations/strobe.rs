@@ -40,7 +40,7 @@ impl Strobe {
 }
 
 impl Renderable for Strobe {
-    fn render(&mut self, frame: i32, fb: &mut RefMut<[u8]>) {
+    fn render(&mut self, frame: u32, fb: &mut RefMut<[u8]>) {
         self.prepare();
 
         let r = (frame + 0) % 24;

@@ -5,6 +5,7 @@ use std::thread::sleep;
 use magick_rust::{magick_wand_genesis};
 
 use animations::strobe::Strobe;
+use animations::waves::Waves;
 use animations::common::Renderable;
 use display::LedDisplay;
 
@@ -12,7 +13,7 @@ mod constants;
 mod display;
 mod animations;
 
-fn render<T: Renderable>(frame: i32, fb: &mut RefMut<[u8]>, anim: &mut T) {
+fn render<T: Renderable>(frame: u32, fb: &mut RefMut<[u8]>, anim: &mut T) {
     anim.render(frame, fb);
 }
 
@@ -27,13 +28,14 @@ fn main() {
     println!("Starting empty count: {}", disp.empty_count());
 
     let mut fb = disp.borrow_fb();
+    fb.fill(0);
 
-    let mut anim = Strobe::new();
+    let mut anim = Waves::new();
 
     let now = Instant::now();
 
-    for frame in 0..100 {
-        render(frame, &mut fb, &mut anim);
+    for frame in 0..10000 {
+        render(frame as u32, &mut fb, &mut anim);
         // Call ioctl to DMA to hardware
         disp.flush();
     }
