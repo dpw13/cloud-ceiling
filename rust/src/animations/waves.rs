@@ -1,10 +1,45 @@
 use std::cell::{RefMut};
 use interpolation::Lerp;
 
+use clap::{ValueEnum, Args};
+
 use crate::constants;
 use crate::animations::common::Renderable;
 
-const COLOR_MAP_POINTS: usize = 3;
+#[derive(Args)]
+pub struct WaveArgs {
+    #[arg(short, long, default_value_t = ColorMap::Rainbow)]
+    color_map: ColorMap,
+
+    #[arg(short, long, default_value_t = -0.15)]
+    frame_coeff: f32,
+    #[arg(short, long, default_value_t = 0.0)]
+    x_coeff: f32,
+    #[arg(short, long, default_value_t = 0.0)]
+    y_coeff: f32,
+    #[arg(short, long, default_value_t = 0.20)]
+    r_coeff: f32,
+
+    #[arg(long, default_value_t = 59.0)]
+    x_off: f32,
+    #[arg(long, default_value_t = 12.0)]
+    y_off: f32,
+}
+
+#[derive(ValueEnum, Clone, Debug, PartialEq, Eq)]
+enum ColorMap {
+    Rainbow,
+    Elite,
+}
+
+impl std::fmt::Display for ColorMap {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.to_possible_value()
+            .expect("no values are skipped")
+            .get_name()
+            .fmt(f)
+    }
+}
 
 pub struct ColorPoint {
     val: f32,
@@ -12,22 +47,35 @@ pub struct ColorPoint {
 }
 
 pub struct Waves {
-    color_map: [ColorPoint; COLOR_MAP_POINTS],
+    color_map: Box<[ColorPoint]>,
     phase_coeffs: [f32; 4],
     phase_offsets: [f32; 2],
 }
 
 impl Waves {
-    pub fn new() -> Self {
-        // Color format is framebuffer native, [B, G, R]
-        let color_map = [
-            ColorPoint {val:-1.00001, color: [32,  0,  0] },
-            ColorPoint {val: 0.00000, color: [ 0, 32,  0] },
-            ColorPoint {val: 1.00001, color: [ 0,  0, 32] },
-        ];
+    pub fn new(args: WaveArgs) -> Self {
+        // Color format is framebuffer native, [B, R, G]
+        let color_map: Box<[ColorPoint]>;
 
-        let phase_coeffs: [f32; 4] = [-0.15, 0.00, 0.00, 0.20];
-        let phase_offsets = [58.0, 12.0]; // x, y
+        match args.color_map {
+            ColorMap::Rainbow => {
+                color_map = Box::new([
+                    ColorPoint {val:-1.00001, color: [32,  0,  0] },
+                    ColorPoint {val: 0.00000, color: [ 0, 32,  0] },
+                    ColorPoint {val: 1.00001, color: [ 0,  0, 32] },
+                ]);
+            }
+            ColorMap::Elite => {
+                color_map = Box::new([
+                    ColorPoint {val:-1.00001, color: [ 0,  0,  0] },
+                    ColorPoint {val: 0.20000, color: [ 0,  0,  0] },
+                    ColorPoint {val: 1.00001, color: [ 0, 24,  4] },
+                ]);
+            }
+        }
+
+        let phase_coeffs: [f32; 4] = [args.frame_coeff, args.x_coeff, args.y_coeff, args.r_coeff];
+        let phase_offsets = [args.x_off, args.y_off];
 
         Self {color_map, phase_coeffs, phase_offsets}
     }
