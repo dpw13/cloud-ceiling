@@ -68,15 +68,16 @@ fn rand_range(min: f32, max: f32) -> f32 {
 }
 
 impl Wander {
-    fn new(min: f32, max: f32) -> Self {
-        let pos = rand_range(-1.0, 1.0);
+    fn new(min: f32, max: f32, val: f32) -> Self {
+        let width = max - min;
+        let pos = val/width + min;
 
         Self {
             accel_to_ctr: 0.01,
             temp: 0.003,
             decel: 0.9,
             bound_ctr: (min + max)/2.0,
-            bound_radius: (max - min)/2.0,
+            bound_radius: width/2.0,
             pos,
             vel: 0.0,
             accel: 0.0,
@@ -111,11 +112,11 @@ struct WanderN {
 }
 
 impl WanderN {
-    fn new(dim : usize, min: &[f32], max: &[f32]) -> Self {
+    fn new(dim : usize, min: &[f32], max: &[f32], val: &[f32]) -> Self {
         let mut wanderers = Vec::<Wander>::new();
 
         for i in 0..dim {
-            wanderers.push(Wander::new(min[i], max[i]));
+            wanderers.push(Wander::new(min[i], max[i], val[i]));
         }
 
         WanderN {wanderers}
@@ -136,7 +137,7 @@ impl WanderN {
 
 pub struct Waves {
     color_map: Box<[ColorPoint]>,
-    phase_coeffs: [f32; 4],
+    phase_coeffs: WanderN,
     phase_offsets: WanderN,
 }
 
@@ -149,7 +150,9 @@ impl Waves {
             ColorMap::Rainbow => {
                 color_map = Box::new([
                     ColorPoint {val:-1.00001, color: [32,  0,  0] },
+                    ColorPoint {val:-0.70000, color: [16, 16,  0] },
                     ColorPoint {val: 0.00000, color: [ 0, 32,  0] },
+                    ColorPoint {val: 0.70000, color: [ 0, 16, 16] },
                     ColorPoint {val: 1.00001, color: [ 0,  0, 32] },
                 ]);
             }
@@ -171,8 +174,11 @@ impl Waves {
             }
         }
 
-        let phase_coeffs: [f32; 4] = [args.frame_coeff, args.x_coeff, args.y_coeff, args.r_coeff];
-        let phase_offsets = WanderN::new(2, &[0.0; 2], &[constants::LED_COUNT as f32, constants::STRING_COUNT as f32]);
+        let phase_coeff_start = [args.frame_coeff, args.x_coeff, args.y_coeff, args.r_coeff];
+        let phase_coeffs = WanderN::new(4, &[-0.3; 4], &[0.3; 4], &phase_coeff_start);
+
+        let phase_offset_start = [rand_range(0.0, constants::LED_COUNT as f32), rand_range(0.0, constants::STRING_COUNT as f32)];
+        let phase_offsets = WanderN::new(2, &[0.0; 2], &[constants::LED_COUNT as f32, constants::STRING_COUNT as f32], &phase_offset_start);
 
         Self {color_map, phase_coeffs, phase_offsets}
     }
@@ -195,6 +201,7 @@ impl Renderable for Waves {
         // same order as the framebuffer.
         let mut color_index = [[0.0; constants::STRING_COUNT]; constants::LED_COUNT];
         let phase_offset = self.phase_offsets.get_pos();
+        let phase_coeff = self.phase_coeffs.get_pos();
         for (x, row) in color_index.iter_mut().enumerate() {
             let xo = constants::X_SCALE*(x as f32 - phase_offset[0]);
             let xo2 = xo.powi(2);
@@ -203,7 +210,7 @@ impl Renderable for Waves {
                 let r = f32::sqrt(xo2 + yo.powi(2));
                 //print!("{x},{y} rsq = {rsq}\n");
 
-                *p = dot(&self.phase_coeffs, &[frame_f32, xo, yo, r]);
+                *p = dot(&phase_coeff, &[frame_f32, xo, yo, r]);
             }
         }
 
