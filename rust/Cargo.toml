@@ -11,6 +11,7 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.1.10", features = ["derive"] }
+fastrand = "1.9.0"
 interpolation = "0.2.0"
 magick_rust = "0.17.0"
 memmap = "0.7.0"

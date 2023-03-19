@@ -1,3 +1,5 @@
+//use rand::prelude::*;
+use fastrand;
 use std::cell::{RefMut};
 use interpolation::Lerp;
 
@@ -47,10 +49,95 @@ pub struct ColorPoint {
     color: [u8; 3],
 }
 
+struct Wander {
+    accel_to_ctr: f32,
+    temp: f32,
+    decel: f32,
+
+    bound_ctr: f32,
+    bound_radius: f32,
+
+    // Position and velocity are always for a 2x2 box centered at the origin
+    pos: f32,
+    vel: f32,
+    accel: f32,
+}
+
+fn rand_range(min: f32, max: f32) -> f32 {
+    fastrand::f32() * (max-min) + min
+}
+
+impl Wander {
+    fn new(min: f32, max: f32) -> Self {
+        let pos = rand_range(-1.0, 1.0);
+
+        Self {
+            accel_to_ctr: 0.01,
+            temp: 0.003,
+            decel: 0.9,
+            bound_ctr: (min + max)/2.0,
+            bound_radius: (max - min)/2.0,
+            pos,
+            vel: 0.0,
+            accel: 0.0,
+        }
+    }
+
+    fn step_accel(&mut self) {
+        /*
+         * Velocity change consists of:
+         * - deceleration towards stopped
+         * - acceleration towards center
+         * - random impulse
+         */
+        self.accel = self.decel * self.accel + rand_range(-self.temp, self.temp);
+    }
+
+    fn step(&mut self) {
+        self.vel =
+            -self.accel_to_ctr * self.pos.powi(5) +
+            self.accel;
+
+        self.pos += self.vel;
+    }
+
+    fn get_pos(&self) -> f32 {
+        self.bound_radius * self.pos + self.bound_ctr
+    }
+}
+
+struct WanderN {
+    wanderers : Vec<Wander>
+}
+
+impl WanderN {
+    fn new(dim : usize, min: &[f32], max: &[f32]) -> Self {
+        let mut wanderers = Vec::<Wander>::new();
+
+        for i in 0..dim {
+            wanderers.push(Wander::new(min[i], max[i]));
+        }
+
+        WanderN {wanderers}
+    }
+
+    fn step_accel(&mut self) {
+        self.wanderers.iter_mut().for_each(|w| w.step_accel());
+    }
+
+    fn step(&mut self) {
+        self.wanderers.iter_mut().for_each(|w| w.step());
+    }
+
+    fn get_pos(&self) -> Vec<f32> {
+        self.wanderers.iter().map(|w| w.get_pos()).collect()
+    }
+}
+
 pub struct Waves {
     color_map: Box<[ColorPoint]>,
     phase_coeffs: [f32; 4],
-    phase_offsets: [f32; 2],
+    phase_offsets: WanderN,
 }
 
 impl Waves {
@@ -85,7 +172,7 @@ impl Waves {
         }
 
         let phase_coeffs: [f32; 4] = [args.frame_coeff, args.x_coeff, args.y_coeff, args.r_coeff];
-        let phase_offsets = [args.x_off, args.y_off];
+        let phase_offsets = WanderN::new(2, &[0.0; 2], &[constants::LED_COUNT as f32, constants::STRING_COUNT as f32]);
 
         Self {color_map, phase_coeffs, phase_offsets}
     }
@@ -98,16 +185,21 @@ fn dot(a: &[f32], b: &[f32]) -> f32 {
 impl Renderable for Waves {
     fn render(&mut self, frame: u32, fb: &mut RefMut<[u8]>) {
         let frame_f32 = frame as f32;
+        if frame % 20 == 0 {
+            self.phase_offsets.step_accel();
+        }
+        self.phase_offsets.step();
 
         // calculate phase at each point
         // This array is an LED_COUNT array of STRING_COUNT f32s. This is the
         // same order as the framebuffer.
         let mut color_index = [[0.0; constants::STRING_COUNT]; constants::LED_COUNT];
+        let phase_offset = self.phase_offsets.get_pos();
         for (x, row) in color_index.iter_mut().enumerate() {
-            let xo = constants::X_SCALE*(x as f32 - self.phase_offsets[0]);
+            let xo = constants::X_SCALE*(x as f32 - phase_offset[0]);
             let xo2 = xo.powi(2);
             for (y, p) in row.iter_mut().enumerate() {
-                let yo = y as f32 - self.phase_offsets[1];
+                let yo = y as f32 - phase_offset[1];
                 let r = f32::sqrt(xo2 + yo.powi(2));
                 //print!("{x},{y} rsq = {rsq}\n");
 
@@ -127,7 +219,7 @@ impl Renderable for Waves {
         /*
          * x is the longer coordinate here (LED_COUNT)
          * y is the shorter index (STRING_COUNT or string index)
-         * 
+         *
          * if y is even, we go right into the framebuffer at (x, y/2)
          * if y is odd, we reverse and go into (LED_COUNT-1 - x, STRING_COUNT-1 - y/2)
          */
