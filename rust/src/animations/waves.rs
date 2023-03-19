@@ -30,6 +30,7 @@ pub struct WaveArgs {
 enum ColorMap {
     Rainbow,
     Elite,
+    Sky,
 }
 
 impl std::fmt::Display for ColorMap {
@@ -70,6 +71,15 @@ impl Waves {
                     ColorPoint {val:-1.00001, color: [ 0,  0,  0] },
                     ColorPoint {val: 0.20000, color: [ 0,  0,  0] },
                     ColorPoint {val: 1.00001, color: [ 0, 24,  4] },
+                ]);
+            }
+            ColorMap::Sky => {
+                color_map = Box::new([
+                    ColorPoint {val:-1.00001, color: [24,  0,  0] },
+                    ColorPoint {val:-0.80001, color: [24,  0,  0] },
+                    ColorPoint {val:-0.40001, color: [16, 16, 16] },
+                    ColorPoint {val: 0.50000, color: [ 4,  4,  4] },
+                    ColorPoint {val: 1.00001, color: [ 1,  1,  1] },
                 ]);
             }
         }
