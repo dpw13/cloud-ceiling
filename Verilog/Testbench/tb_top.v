@@ -58,7 +58,7 @@ always #PERIOD_FCLK gpmc_fclk=~gpmc_fclk;
 always @(posedge gpmc_fclk) gpmc_clk <= (gpmc_clk_en) ? ~gpmc_clk : 1'b0;
 
 // Store expected frame data
-reg [7:0] frame_data[N_FRAMES-1:0][N_LEDS_PER_STRING*N_STRINGS*3-1:0];
+reg [7:0] frame_data[N_FRAMES:0][N_LEDS_PER_STRING*N_STRINGS*3-1:0];
 
 localparam T0H_min = 400-150;
 localparam T0H_max = 400+150;
@@ -205,7 +205,12 @@ integer word, frame, i;
 
 initial begin
 
-    for (frame=0; frame < N_FRAMES; frame = frame+1) begin
+    // First frame should be the init frame
+    for (i=0; i < N_LEDS_PER_STRING*N_STRINGS*3; i = i + 1) begin
+        frame_data[frame][i] = 8'h08;
+    end
+
+    for (frame=1; frame <= N_FRAMES; frame = frame+1) begin
         for (i=0; i < N_LEDS_PER_STRING*N_STRINGS*3; i = i + 1) begin
             frame_data[frame][i] = $random();
         end
@@ -281,10 +286,13 @@ initial begin
     #100;
     $display("Scratch reg: %04x", temp_data);
 
+    // Wait for init to complete
+    #500_000;
+
     // One frame
     for(word = 0; word < N_LEDS_PER_STRING*N_STRINGS*3/2; word = word + 1) begin
-        temp_data[ 7:0] = frame_data[0][2*word + 0];
-        temp_data[15:8] = frame_data[0][2*word + 1];
+        temp_data[ 7:0] = frame_data[1][2*word + 0];
+        temp_data[15:8] = frame_data[1][2*word + 1];
         gpmc_wr(16'h1000, temp_data);
     end
     // Access some other register to get the GPMC data through
@@ -293,7 +301,7 @@ initial begin
     #300_000;
 
     // Two frames
-    for(frame = 1; frame < 3; frame = frame + 1) begin
+    for(frame = 2; frame < 4; frame = frame + 1) begin
         for(word = 0; word < N_LEDS_PER_STRING*N_STRINGS*3/2; word = word + 1) begin
             temp_data[ 7:0] = frame_data[frame][2*word + 0];
             temp_data[15:8] = frame_data[frame][2*word + 1];

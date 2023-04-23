@@ -8,7 +8,8 @@ module parallel_strings #(
     parameter N_STRINGS = 4,
     parameter N_LEDS_PER_STRING = 150,
     parameter FIFO_ADDR_WIDTH = 12,
-    parameter FIFO_DATA_WIDTH = 16
+    parameter FIFO_DATA_WIDTH = 16,
+    parameter INIT_COLOR = 24'h0C1006 // GGRRBB
 ) (
     input clk,
     input reset,
@@ -35,7 +36,6 @@ module parallel_strings #(
     localparam FLUSH_TICKS = 6;
 
     wire [N_STRINGS-1:0] string_ready;
-    reg [N_STRINGS-1:0] pxl_data_valid = 0;
 
     reg fifo_read_lcl = 1'b0;
     assign fifo_read = fifo_read_lcl;
@@ -213,36 +213,69 @@ module parallel_strings #(
         end
     end
 
+    reg [N_STRINGS-1:0] shift_data_valid = 0;
     reg [47:0] fifo_shift_reg = 0;
+
     always @(posedge clk)
     begin
         if (reset || ~frame_active) begin
-            pxl_data_valid <= 0;
+            shift_data_valid <= 0;
             fifo_shift_reg <= 0;
         end else begin
             if (fifo_data_valid || flush_shift_reg) begin
                 // Write data to top of shift register and shift down
                 fifo_shift_reg <= { fifo_data, fifo_shift_reg[47:16] };
-                pxl_data_valid[fifo_data_destination] <= next_word_completes_pixel_qq;
+                shift_data_valid[fifo_data_destination] <= next_word_completes_pixel_qq;
             end else if (string_ready[fifo_data_destination]) begin
-                pxl_data_valid <= 0;
+                shift_data_valid <= 0;
+            end
+        end
+    end
+
+    wire [23:0] shift_data;
+    assign shift_data = shift_reg_sel_qq ? fifo_shift_reg[31:8] : fifo_shift_reg[24:0];
+
+    reg [$clog2(N_LEDS_PER_STRING+1)-1:0] init_pixels_remaining;
+    reg init_active;
+    reg init_data_valid;
+
+    always @(posedge clk)
+    begin
+        if (reset) begin
+            init_pixels_remaining <= N_LEDS_PER_STRING;
+            init_active <= 1'b1;
+            init_data_valid <= 1'b0;
+        end else begin
+            // Strobes
+            init_data_valid <= 1'b0;
+
+            if (init_active && !string_active && !init_data_valid) begin
+                if (init_pixels_remaining > 0) begin
+                    init_pixels_remaining <= init_pixels_remaining - 1;
+                    init_data_valid <= 1'b1;
+                end else begin
+                    init_active <= 1'b0;
+                end
             end
         end
     end
 
     wire [23:0] pxl_data;
-    assign pxl_data = shift_reg_sel_qq ? fifo_shift_reg[31:8] : fifo_shift_reg[24:0];
+    assign pxl_data = init_active ? INIT_COLOR : shift_data;
 
     genvar string;
     generate
         for (string = 0; string < N_STRINGS; string = string + 1) begin
+            wire pxl_data_valid;
+            assign pxl_data_valid = init_active ? init_data_valid : shift_data_valid[string];
+
             string_driver #(
                 .CLK_PERIOD_NS(50),
                 .DATA_WIDTH(24)
             ) string_driverx (
                 .clk(clk),
                 .pixel_data(pxl_data),
-                .pixel_data_valid(pxl_data_valid[string]),
+                .pixel_data_valid(pxl_data_valid),
                 .h_blank(h_blank_q),
                 .sdi(led_sdi[string]),
                 .string_ready(string_ready[string])

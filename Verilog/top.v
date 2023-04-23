@@ -25,7 +25,13 @@ module top(
 	localparam FIFO_ADDR_WIDTH = 13;
 	localparam FIFO_DATA_WIDTH = 16;
 
+	// Testbench params
+	//localparam N_STRINGS = 5;
+	//localparam N_LEDS_PER_STRING = 8;
+
+	// Production params
 	localparam N_STRINGS = 12;
+	localparam N_LEDS_PER_STRING = 236;
 
 	wire clk_20;
 	wire pll_locked;
@@ -267,7 +273,7 @@ module top(
 	// String drivers
 	parallel_strings #(
 		.N_STRINGS(N_STRINGS),
-		.N_LEDS_PER_STRING(236),
+		.N_LEDS_PER_STRING(N_LEDS_PER_STRING),
 		.FIFO_ADDR_WIDTH(FIFO_ADDR_WIDTH),
 		.FIFO_DATA_WIDTH(FIFO_DATA_WIDTH)
 	) all_strings (
