@@ -64,6 +64,13 @@ try:
     time.sleep(0.1)
     print(f"Finished with empty count of {empty}. Transmitted {i+1} words ({2*i+2} B)")
 
+    for i in range(0, FRAME_SIZE//2 - 1):
+        fb_16[0] = 0x20202020
+
+    time.sleep(0.1)
+    empty = regs[FIFO_EMPTY_COUNT_REG]
+    print(f"Finished with empty count of {empty}. Transmitted {i+1} words ({2*i+2} B)")
+
 finally:
     fb_raw.close()
     os.close(ledfb_fd)

@@ -10,7 +10,7 @@ FIFO_EMPTY_COUNT_REG = 0x9
 HBLANK_REG = 0xA
 
 FIFO_DATA_REGION = 0x1001000
-FIFO_DATA_SIZE = 0x1000
+FIFO_DATA_SIZE = 0x4000
 
 # Needs to match FPGA to get correct framebuffer size.
 LED_COUNT = 118
