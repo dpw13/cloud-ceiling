@@ -10,7 +10,7 @@ import wand.drawing
 from constants import *
 from utils import interpolate_into
 
-N_PARTICLES = 8
+N_PARTICLES = 2
 GROWTH_RATE = 0.2
 BURN_RATE_MIN = GROWTH_RATE*0.8
 BURN_RATE_MAX = GROWTH_RATE*1.5
@@ -23,8 +23,10 @@ COLOR_MAP = [
     # Format:
     # [ age, b, g, r ]
     [ 0.0, 0x40, 0x00, 0x00 ], # blue
-    [ 4.0, 0x10, 0x20, 0x00 ], # soft green
-    [ 8.0, 0x00, 0x00, 0x00 ], # black
+    [ 6.0, 0x20, 0x20, 0x00 ], # soft green
+    [ 8.0, 0x00, 0x00, 0x00 ], # blue
+    #[ 6.0, 0x40, 0x00, 0x00 ], # soft green
+    #[ 8.0, 0x00, 0x00, 0x00 ], # black
 ]
 
 AGE_XP = np.array([m[0] for m in COLOR_MAP])

@@ -45,7 +45,7 @@ ledfb_fd, fb_raw, fb_16 = get_fb()
 try:
     frame = 0
     for i in range(0, FRAME_SIZE//2):
-        fb_16[0] = 0
+        fb_16[0] = 0x20202020
         last_empty = empty
         empty = regs[FIFO_EMPTY_COUNT_REG]
         empty = regs[FIFO_EMPTY_COUNT_REG]

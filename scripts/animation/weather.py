@@ -121,7 +121,7 @@ def render(frame, fb, fb_32):
 
         draw.ellipse((STRING_COUNT/2, sun_pos), [SUN_RADIUS, SUN_RADIUS*X_SCALE])
 
-        moon_angle = (frame / 2.07) % 360
+        moon_angle = (frame / 2.07 + 125) % 360
         moon_pos = np.interp(moon_angle, POS_XP, POS)
 
         b = int(round(np.interp(moon_angle, MOON_COLOR_XP, B_MOON)))
