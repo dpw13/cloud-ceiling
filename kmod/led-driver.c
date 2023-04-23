@@ -246,7 +246,7 @@ static int __init led_driver_init(void)
                 goto failed_regs;
         }
 
-        dev_info(ledfb_dev.dev, "ID is %04x", readw(ledfb_dev.regs + 0))
+        dev_info(ledfb_dev.dev, "ID is %04x", readw(ledfb_dev.regs + 0));
 
         goto success;
 
