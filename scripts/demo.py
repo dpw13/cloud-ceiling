@@ -90,11 +90,11 @@ try:
 
         # Serialize framebuffer to LEDs
         fcntl.ioctl(ledfb_fd, 0, FRAME_SIZE)
-        time.sleep(0.1)
+        time.sleep(0.01)
 
-        empty = regs[FIFO_EMPTY_COUNT_REG]
-        empty = regs[FIFO_EMPTY_COUNT_REG]
-        print(f"Empty count after frame {frame} is {empty}")
+        #empty = regs[FIFO_EMPTY_COUNT_REG]
+        #empty = regs[FIFO_EMPTY_COUNT_REG]
+        #print(f"Empty count after frame {frame} is {empty}")
 
         #status = regs[FIFO_STATUS_REG]
         #print(f"Status: 0x{status:04x}")
