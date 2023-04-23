@@ -15,6 +15,7 @@ static struct ledfb_struct {
         struct device *dev;
         int major;
         struct dma_chan *chan;
+        uint16_t *regs;
         dma_addr_t src_handle;
         void *fb;
         size_t fb_size;
@@ -25,17 +26,20 @@ static struct ledfb_struct {
 #define BUFFER_SIZE 0x4000
 #define FPGA_FIFO_ADDR 0x1001000UL
 
+#define REG_SIZE 0x1000
+#define FPGA_REG_ADDR 0x1000000UL
+
 static const struct vm_operations_struct mmap_ledfb_ops = {};
 
 static void dma_callback(void *arg)
 {
-        dev_dbg(ledfb_dev.dev, "DMA callback\n");
+        uint16_t full_count = readw(ledfb_dev.regs + 0x9);
+        dev_dbg(ledfb_dev.dev, "DMA callback, full count=%u\n", full_count);
         ledfb_dev.frame++;
 }
 
 static long ioctl_ledfb(struct file *filp, unsigned int ioctl_num, unsigned long ioctl_param)
 {
-        struct dma_async_tx_descriptor *tx;
         dma_addr_t buf_start, buf_end;
         dma_cookie_t cookie;
 
@@ -58,23 +62,27 @@ static long ioctl_ledfb(struct file *filp, unsigned int ioctl_num, unsigned long
                 if (buf_size > 4096)
                         buf_size = 4096;
 
-                /* Create tx descriptor */
-                tx = ledfb_dev.chan->device->device_prep_dma_memcpy(
-                        ledfb_dev.chan,
-                        FPGA_FIFO_ADDR, // destination bus address
-                        buf_start, // src bus address
-                        buf_size, // size
-                        0); // dma_ctrl_flags
+                {
+                        struct dma_async_tx_descriptor *tx;
 
-                if (!tx) {
-                        dev_err(ledfb_dev.dev, "Failed to create TX descriptor\n");
-                        return -ENXIO;
+                        /* Create tx descriptor */
+                        tx = ledfb_dev.chan->device->device_prep_dma_memcpy(
+                                ledfb_dev.chan,
+                                FPGA_FIFO_ADDR, // destination bus address
+                                buf_start, // src bus address
+                                buf_size, // size
+                                0); // dma_ctrl_flags
+
+                        if (!tx) {
+                                dev_err(ledfb_dev.dev, "Failed to create TX descriptor\n");
+                                return -ENXIO;
+                        }
+
+                        tx->callback = dma_callback;
+
+                        /* tx is consumed here, do not reuse */
+                        cookie = tx->tx_submit(tx);
                 }
-
-                tx->callback = dma_callback;
-
-                /* I can't tell whether tx is consumed here or not */
-                cookie = tx->tx_submit(tx);
 
                 if (dma_submit_error(cookie)) {
                         dev_err(ledfb_dev.dev, "Failed to submit TX descriptor");
@@ -231,8 +239,19 @@ static int __init led_driver_init(void)
                 goto failed_map;
 	}
 
+        /* Map registers */
+        ledfb_dev.regs = (uint16_t *)ioremap(FPGA_REG_ADDR, REG_SIZE);
+        if (IS_ERR(ledfb_dev.regs)) {
+                ret = PTR_ERR(ledfb_dev.regs);
+                goto failed_regs;
+        }
+
+        dev_info(ledfb_dev.dev, "ID is %04x", readw(ledfb_dev.regs + 0))
+
         goto success;
 
+failed_regs:
+	dma_unmap_single(ledfb_dev.dev, ledfb_dev.src_handle, BUFFER_SIZE, DMA_TO_DEVICE);
 failed_map:
         kfree(ledfb_dev.fb);
 failed_alloc:
@@ -253,6 +272,7 @@ static void __exit led_driver_cleanup(void)
 {
 	dev_info(ledfb_dev.dev, "Stopping LED framebuffer\n");
 
+        iounmap(ledfb_dev.regs);
 	dma_unmap_single(ledfb_dev.dev, ledfb_dev.src_handle, BUFFER_SIZE, DMA_TO_DEVICE);
         kfree(ledfb_dev.fb);
         //dma_release_channel(ledfb_dev.chan); // exclusive access only
