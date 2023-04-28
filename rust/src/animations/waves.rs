@@ -1,6 +1,7 @@
 //use rand::prelude::*;
 use fastrand;
 use std::cell::{RefMut};
+use std::fmt;
 use interpolation::Lerp;
 
 use clap::{ValueEnum, Args};
@@ -69,15 +70,16 @@ fn rand_range(min: f32, max: f32) -> f32 {
 
 impl Wander {
     fn new(min: f32, max: f32, val: f32) -> Self {
-        let width = max - min;
-        let pos = val/width + min;
+        let radius = (max - min)/2.0;
+        let center = (max + min)/2.0;
+        let pos = (val - center)/radius;
 
         Self {
             accel_to_ctr: 0.01,
             temp: 0.003,
             decel: 0.9,
-            bound_ctr: (min + max)/2.0,
-            bound_radius: width/2.0,
+            bound_ctr: center,
+            bound_radius: radius,
             pos,
             vel: 0.0,
             accel: 0.0,
@@ -104,6 +106,12 @@ impl Wander {
 
     fn get_pos(&self) -> f32 {
         self.bound_radius * self.pos + self.bound_ctr
+    }
+}
+
+impl fmt::Display for Wander {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} -> {}", self.pos, self.get_pos())
     }
 }
 
@@ -135,6 +143,13 @@ impl WanderN {
     }
 }
 
+impl fmt::Display for WanderN {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s: Vec<String> = self.wanderers.iter().map(|w| w.to_string()).collect();
+        write!(f, "{}", s.join(", "))
+    }
+}
+
 pub struct Waves {
     color_map: Box<[ColorPoint]>,
     phase_coeffs: WanderN,
@@ -150,11 +165,13 @@ impl Waves {
             ColorMap::Rainbow => {
                 color_map = Box::new([
                     ColorPoint {val:-1.00001, color: [32,  0,  0] },
-                    ColorPoint {val:-0.70000, color: [16, 16,  0] },
-                    ColorPoint {val: 0.00000, color: [ 0, 32,  0] },
-                    ColorPoint {val: 0.70000, color: [ 0, 16, 16] },
-                    ColorPoint {val: 1.00001, color: [ 0,  0, 32] },
-                ]);
+                    ColorPoint {val:-0.66000, color: [16, 16,  0] },
+                    ColorPoint {val:-0.33000, color: [ 0, 32,  0] },
+                    ColorPoint {val: 0.00000, color: [ 0, 16, 16] },
+                    ColorPoint {val: 0.33000, color: [ 0,  0, 32] },
+                    ColorPoint {val: 0.66000, color: [16,  0, 16] },
+                    ColorPoint {val: 1.00001, color: [32,  0,  0] },
+                    ]);
             }
             ColorMap::Elite => {
                 color_map = Box::new([
@@ -166,8 +183,8 @@ impl Waves {
             ColorMap::Sky => {
                 color_map = Box::new([
                     ColorPoint {val:-1.00001, color: [24,  0,  0] },
-                    ColorPoint {val:-0.80001, color: [24,  0,  0] },
-                    ColorPoint {val:-0.40001, color: [16, 16, 16] },
+                    ColorPoint {val:-0.80000, color: [24,  0,  0] },
+                    ColorPoint {val:-0.40000, color: [16, 16, 16] },
                     ColorPoint {val: 0.50000, color: [ 4,  4,  4] },
                     ColorPoint {val: 1.00001, color: [ 1,  1,  1] },
                 ]);
@@ -192,9 +209,13 @@ impl Renderable for Waves {
     fn render(&mut self, frame: u32, fb: &mut RefMut<[u8]>) {
         let frame_f32 = frame as f32;
         if frame % 20 == 0 {
+            //print!("Offsets: {}\n", self.phase_offsets);
+            //print!("Coeffs: {}\n", self.phase_coeffs);
             self.phase_offsets.step_accel();
+            self.phase_coeffs.step_accel();
         }
         self.phase_offsets.step();
+        self.phase_coeffs.step();
 
         // calculate phase at each point
         // This array is an LED_COUNT array of STRING_COUNT f32s. This is the
@@ -214,10 +235,14 @@ impl Renderable for Waves {
             }
         }
 
-        // calculate cosine of each phase, mapping an arbitrary f32 onto [-1.0, 1.0]
-        for (_, row) in color_index.iter_mut().enumerate() {
-            for (_, p) in row.iter_mut().enumerate() {
-                *p = p.cos();
+        // convert phase to ramp function -1:1
+        for (x, row) in color_index.iter_mut().enumerate() {
+            for (y, p) in row.iter_mut().enumerate() {
+                let v = p.rem_euclid(2.0) - 1.0;
+                if v < -1.0 {
+                    print!("{x},{y} {p} {v}\n");
+                }
+                *p = v;
             }
         }
 

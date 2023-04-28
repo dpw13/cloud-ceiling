@@ -5,7 +5,7 @@ pub const FIFO_DATA_SIZE: usize = 0x4000;
 
 /* Needs to match FPGA to get correct framebuffer size. */
 pub const LED_COUNT: usize = 118;
-pub const STRING_COUNT: usize = 24;
+pub const STRING_COUNT: usize = 46;
 pub const PIXEL_COUNT: usize = LED_COUNT*STRING_COUNT;
 pub const BYTES_PER_LED: usize = 3;
 
