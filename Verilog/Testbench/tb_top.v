@@ -10,7 +10,7 @@ parameter PERIOD_100 = 5; // 100 MHz
 parameter PERIOD_FCLK = 10; // 50 MHz, producing 25 MHz GPMC bus
 parameter GPMC_TCO = 0; // Delay data outputs on GPMC bus after GPMC clock
 
-localparam N_LEDS_PER_STRING = 8;
+localparam N_LEDS_PER_STRING = 4;
 localparam N_STRINGS = 5;
 localparam N_FRAMES = 3;
 

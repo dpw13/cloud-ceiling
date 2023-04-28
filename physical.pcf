@@ -46,23 +46,23 @@ set_io gpmc_oen 20
 # 4 E|  |E 1
 #    ----
 
-set_io led_sdi[12] 7  # PMOD4 B1
-set_io led_sdi[13] 9  # PMOD4 B2
-set_io led_sdi[14] 15 # PMOD4 B3
-set_io led_sdi[15] 12 # PMOD4 B4
-set_io led_sdi[16] 4  # PMOD4 A1
-set_io led_sdi[17] 8  # PMOD4 A2
-set_io led_sdi[18] 10 # PMOD4 A3
-set_io led_sdi[19] 11 # PMOD4 A4
+set_io led_sdi[15] 7  # PMOD4 B1
+set_io led_sdi[14] 9  # PMOD4 B2
+set_io led_sdi[13] 15 # PMOD4 B3
+set_io led_sdi[12] 12 # PMOD4 B4
+#set_io led_sdi[] 4  # PMOD4 A1
+set_io led_sdi[16] 8  # PMOD4 A2
+set_io led_sdi[17] 10 # PMOD4 A3
+set_io led_sdi[18] 11 # PMOD4 A4
 
-set_io led_sdi[20] 107 # PMOD3 B1
-set_io led_sdi[21] 112 # PMOD3 B2
-set_io led_sdi[22] 114 # PMOD3 B3
+#set_io led_sdi[] 107 # PMOD3 B1
+#set_io led_sdi[] 112 # PMOD3 B2
+#set_io led_sdi[] 114 # PMOD3 B3
 #set_io led_sdi[] 129 # PMOD3 B4
-#set_io led_sdi[] 110 # PMOD3 A1
-#set_io led_sdi[] 113 # PMOD3 A2
-#set_io led_sdi[] 115 # PMOD3 A3
-#set_io led_sdi[] 130 # PMOD3 A4
+set_io led_sdi[21] 110 # PMOD3 A1
+set_io led_sdi[22] 113 # PMOD3 A2
+set_io led_sdi[20] 115 # PMOD3 A3
+set_io led_sdi[19] 130 # PMOD3 A4
 
 set_io led_sdi[0] 47 # PMOD2 B1
 set_io led_sdi[1] 49 # PMOD2 B2
@@ -73,10 +73,11 @@ set_io led_sdi[3] 60 # PMOD2 B4
 #set_io led_sdi[] 56 # PMOD2 A3
 #set_io led_sdi[] 62 # PMOD2 A4
 
-set_io led_sdi[8] 37 # PMOD1 B1
-set_io led_sdi[9] 39 # PMOD1 B2
-set_io led_sdi[10] 42 # PMOD1 B3
-set_io led_sdi[11] 44 # PMOD1 B4
+# cable reversed for 8-11
+set_io led_sdi[11] 37 # PMOD1 B1
+set_io led_sdi[10] 39 # PMOD1 B2
+set_io led_sdi[9] 42 # PMOD1 B3
+set_io led_sdi[8] 44 # PMOD1 B4
 set_io led_sdi[4] 38 # PMOD1 A1
 set_io led_sdi[5] 41 # PMOD1 A2
 set_io led_sdi[6] 43 # PMOD1 A3

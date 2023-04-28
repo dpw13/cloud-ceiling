@@ -30,7 +30,7 @@ module top(
 	//localparam N_LEDS_PER_STRING = 8;
 
 	// Production params
-	localparam N_STRINGS = 12;
+	localparam N_STRINGS = 23;
 	localparam N_LEDS_PER_STRING = 236;
 
 	wire clk_20;

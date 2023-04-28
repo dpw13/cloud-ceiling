@@ -31,7 +31,6 @@ module parallel_strings #(
     // This is the total number of words in the FIFO we need before shifting out all data.
     localparam TOTAL_PIXEL_FIFO_WORDS = TOTAL_PIXEL_BYTES/FIFO_DATA_BYTES;
     localparam BYTES_PER_COL = N_STRINGS * 3;
-    localparam FIFO_WORDS_PER_COL = BYTES_PER_COL/FIFO_DATA_BYTES;
 
     localparam FLUSH_TICKS = 6;
 
@@ -44,16 +43,21 @@ module parallel_strings #(
     reg [$clog2(N_STRINGS)-1:0] active_string = 0;
     reg [$clog2(FLUSH_TICKS)-1:0] flush_timer = 0;
     reg [$clog2(N_LEDS_PER_STRING)-1:0] pixels_remaining = 0;
-    reg [$clog2(FIFO_WORDS_PER_COL+1)-1:0] words_remaining = 0;
+    reg [$clog2(BYTES_PER_COL+FIFO_DATA_BYTES)-1:0] bytes_remaining = 0;
 
     reg h_blank = 1'b0;
+
+    // The flush_shift_reg signal is used to flush the additional data in the shift
+    // register. The shift register is 48 bits wide, so we still have a full pixel's
+    // worth of data left at the end without an additional read.
+    reg flush_shift_reg = 1'b0;
 
     always @(posedge clk)
     begin
         if (reset) begin
             frame_active <= 1'b0;
             pixels_remaining <= 0;
-            words_remaining <= 0;
+            bytes_remaining <= 0;
             h_blank <= 1'b0;
             flush_timer <= 0;
         end else begin
@@ -68,7 +72,12 @@ module parallel_strings #(
                 h_blank <= 1'b1;
                 pixels_remaining <= N_LEDS_PER_STRING - 1;
                 // First row requires an extra read to prime the shift register
-                words_remaining <= FIFO_WORDS_PER_COL;
+                // If the number of strings is odd, we can end up with extra data. In theory
+                // this would be bytes_remaining of -1. Instead of wasting a bit making this
+                // a signed value, let's track the number of bytes remaining + 1. If we have
+                // all the data and there's none left over, this value should end up at 1
+                // instead of zero.
+                bytes_remaining <= BYTES_PER_COL + FIFO_DATA_BYTES + 1;
             end
 
             if (flush_timer > 0) begin
@@ -78,20 +87,27 @@ module parallel_strings #(
                 end
             end
 
-            if (fifo_read_lcl) begin
-                if (pixels_remaining == 0 && words_remaining == 1) begin
+            if (fifo_read_lcl || flush_shift_reg) begin
+                // We are looking for the last real data read. The number of bytes
+                // remaining on that cycle will be 3 bytes for the last pixel *plus*
+                // the 2 bytes from the remaining read.
+                if (pixels_remaining == 0 && bytes_remaining == 5) begin
                     // This is the last FIFO access for the last pixel
                     flush_timer <= FLUSH_TICKS - 1;
                 end
 
-                if (words_remaining != 0) begin
+                if (bytes_remaining > 3) begin
                     // Still completing a column
-                    words_remaining <= words_remaining - 1;
+                    bytes_remaining <= bytes_remaining - FIFO_DATA_BYTES;
                 end else begin
                     // Completed this pixel for all strings
                     if (pixels_remaining != 0) begin
                         pixels_remaining <= pixels_remaining - 1;
-                        words_remaining <= FIFO_WORDS_PER_COL - 1;
+                        // We only add the number of bytes in each column. The initial
+                        // offset of 1 is added at the beginning of the frame. We're both
+                        // subtracting 2 for the active FIFO read and adding the expected
+                        // number of bytes for the next column.
+                        bytes_remaining <= bytes_remaining + BYTES_PER_COL - FIFO_DATA_BYTES;
                     end
                 end
             end
@@ -116,7 +132,6 @@ module parallel_strings #(
     //
     // This is made easier by the fact that we round-robin through all the string drivers. This
     // design won't work as-is if only a single driver is used.
-    reg flush_shift_reg = 1'b0;
     reg [1:0] fifo_shift_count = 0;
     reg fifo_shift_reg_primed = 0;
     reg must_wait_for_ready = 1'b0;
@@ -133,17 +148,16 @@ module parallel_strings #(
             must_wait_for_ready <= 1'b0;
             next_word_completes_pixel <= 1'b0;
         end else begin
-            // Don't assert read twice in a row
-            if (flush_timer > 0) begin
+            if (flush_timer > 0 && flush_timer < 8) begin
                 fifo_read_lcl <= 1'b0;
                 flush_shift_reg <= (flush_timer == 3);
                 fifo_shift_count <= 0;
                 fifo_shift_reg_primed <= 1'b0;
-                active_string <= 0;
             end else begin
                 fifo_read_lcl <= 1'b0;
                 flush_shift_reg <= 1'b0;
 
+                // Don't assert read twice in a row
                 if (fifo_full_count > 0 && !fifo_read_lcl) begin
                     if (!must_wait_for_ready || string_ready[active_string]) begin
                         fifo_read_lcl <= 1'b1;
@@ -161,6 +175,8 @@ module parallel_strings #(
                         must_wait_for_ready <= next_word_completes_pixel;
                     end
 
+                    // active_string is coherent with fifo_read_lcl. The destination
+                    // for FIFO data is registered and delayed below
                     if (must_wait_for_ready && string_ready[active_string]) begin
                         // Jump to next string if we'll complete a pixel with this read
                         if (active_string == (N_STRINGS - 1)) begin
