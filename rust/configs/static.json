@@ -1,0 +1,19 @@
+{
+    "vars": {
+        "float": [0, 0, 0, 0],
+        "color": [{"r": 20, "g": 20, "b": 20}],
+        "position": []
+    },
+    "primitives": [
+        {
+            "type": "scalar_add",
+            "inputs": {
+                "a": 0,
+                "b": 1
+            },
+            "outputs": {
+                "o": 3
+            }
+        }
+    ]
+}

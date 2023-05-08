@@ -163,14 +163,17 @@ impl Waves {
 
         match args.color_map {
             ColorMap::Rainbow => {
+                //color_map = Box::new([
+                //    ColorPoint {val:-1.00001, color: [16,  0,  0] },
+                //    ColorPoint {val:-0.33333, color: [ 0, 16,  0] },
+                //    ColorPoint {val: 0.33333, color: [ 0,  0, 16] },
+                //    ColorPoint {val: 1.00001, color: [16,  0,  0] },
+                //    ]);
                 color_map = Box::new([
-                    ColorPoint {val:-1.00001, color: [32,  0,  0] },
-                    ColorPoint {val:-0.66000, color: [16, 16,  0] },
-                    ColorPoint {val:-0.33000, color: [ 0, 32,  0] },
-                    ColorPoint {val: 0.00000, color: [ 0, 16, 16] },
-                    ColorPoint {val: 0.33000, color: [ 0,  0, 32] },
-                    ColorPoint {val: 0.66000, color: [16,  0, 16] },
-                    ColorPoint {val: 1.00001, color: [32,  0,  0] },
+                    ColorPoint {val:-1.00001, color: [16,  4,  4] },
+                    ColorPoint {val:-0.33333, color: [ 4, 16,  4] },
+                    ColorPoint {val: 0.33333, color: [ 4,  4, 16] },
+                    ColorPoint {val: 1.00001, color: [16,  4,  4] },
                     ]);
             }
             ColorMap::Elite => {
