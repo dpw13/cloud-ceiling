@@ -227,6 +227,23 @@ fn main() {
 
     let mut frame: u32 = 0;
     while args.frame_cnt == 0 || frame < args.frame_cnt {
+        state.scalars[0] = frame as f32;
+        for x in 0..constants::STRING_COUNT {
+            state.scalars[1] = x as f32;
+            for y in 0..constants::LED_COUNT {
+                state.scalars[2] = y as f32;
+
+                for block in blocks.iter_mut() {
+                    block.as_mut().execute(&mut state);
+                }
+
+                let idx = constants::fb_idx(x, y);
+
+                fb[idx + 0] = state.colors[0].b;
+                fb[idx + 1] = state.colors[0].r;
+                fb[idx + 2] = state.colors[0].g;
+            }
+        }
         // Render:
         //anim.render(frame, &mut fb);
         // Call ioctl to DMA to hardware
