@@ -87,9 +87,9 @@ fn main() {
     let mut frame: u32 = 0;
     while args.frame_cnt == 0 || frame < args.frame_cnt {
         state.set_scalar(0, frame as f32);
-        for x in 0..constants::STRING_COUNT {
+        for x in 0..constants::LED_COUNT {
             state.set_scalar(1, x as f32);
-            for y in 0..constants::LED_COUNT {
+            for y in 0..constants::STRING_COUNT {
                 state.set_scalar(2, y as f32);
 
                 for block in blocks.iter_mut() {
