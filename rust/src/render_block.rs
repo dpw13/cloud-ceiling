@@ -120,9 +120,11 @@ impl Mul<i32> for Color {
 
 impl RenderState {
     pub fn new() -> Self {
-        let scalars = Vec::<f32>::with_capacity(0);
+        // At least 3 scalars for time, x, and y
+        let scalars = Vec::<f32>::with_capacity(3);
         let positions = Vec::<Position>::with_capacity(0);
-        let colors = Vec::<Color>::with_capacity(0);
+        // At least 1 color for output
+        let colors = Vec::<Color>::with_capacity(1);
 
         RenderState {scalars, positions, colors}
     }

@@ -71,9 +71,10 @@ async fn server_setup(tx_cfg: sync::broadcast::Sender<json::object::Object>) {
 
     // A `Service` is needed for every connection, so this
     // creates one from our `endpoint_impl` function.
-    let make_svc = make_service_fn(move |_conn| {
+    let make_svc = make_service_fn(move |conn| {
         // Clone the broadcast sender before we create the service function itself.
         let tx_cfg = tx_cfg.clone();
+        print!("Got connection from {conn:?}\n");
 
         // This is the actual service function, which will reference a cloned tx_cfg.
         async move {
@@ -84,9 +85,14 @@ async fn server_setup(tx_cfg: sync::broadcast::Sender<json::object::Object>) {
 
     let server = Server::bind(&addr).serve(make_svc);
 
+    print!("Server listening on {addr}\n");
+
     if let Err(e) = server.await {
         panic!("Server error: {}", e);
     }
+
+    print!("Server terminated, should never get here");
+
 }
 
 fn main() {
@@ -94,20 +100,23 @@ fn main() {
 
     let rt = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
+        .worker_threads(4)
         .build()
         .unwrap();
 
-    let cfg = init_config(&args);
-    // Create the watch channel, initialized with the loaded configuration
+    // Create the broadcast channel
     let (tx_cfg, rx_cfg) = sync::broadcast::channel(1);
+    let server_tx_cfg = tx_cfg.clone();
+
+    let cfg = init_config(&args);
 
     if let Err(e) = tx_cfg.send(cfg) {
         print!("Error sending new config: {e}\n");
     }
 
-    rt.spawn(async { server_setup(tx_cfg) });
+    rt.spawn(async move { server_setup(server_tx_cfg).await });
+    rt.block_on(async move { fb_main(&args, rx_cfg) });
 
-    rt.block_on(async { fb_main(&args, rx_cfg) });
 }
 
 fn update_cfg(json_obj: json::object::Object, state: &mut RenderState, blocks: &mut Vec<Box<dyn RenderBlock>>) {
@@ -141,15 +150,16 @@ fn fb_main(args: &Args, mut rx_cfg: sync::broadcast::Receiver<json::object::Obje
     let mut state = RenderState::new();
     let mut blocks = Vec::<Box<dyn RenderBlock>>::new();
 
-    if let Ok(json_obj) = rx_cfg.try_recv() {
-        update_cfg(json_obj, &mut state, &mut blocks);
-    }
-    
-
     let now = Instant::now();
 
     let mut frame: u32 = 0;
     while args.frame_cnt == 0 || frame < args.frame_cnt {
+        // Update config if there's anything new
+        if let Ok(json_obj) = rx_cfg.try_recv() {
+            print!("Updated config");
+            update_cfg(json_obj, &mut state, &mut blocks);
+        }
+
         state.set_scalar(0, frame as f32);
         for x in 0..constants::LED_COUNT {
             state.set_scalar(1, x as f32);
