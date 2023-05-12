@@ -38,7 +38,7 @@ struct Args {
 }
 
 async fn endpoint_impl(_req: Request<Body>, _tx_cfg: sync::broadcast::Sender<json::object::Object>) -> Result<Response<Body>, Infallible> {
-    Ok(Response::new("Hello, World".into()))
+    Ok(Response::new("Hello, World\n".into()))
 }
 
 fn init_config(args: &Args) -> json::object::Object {
@@ -67,14 +67,15 @@ async fn server_setup(tx_cfg: sync::broadcast::Sender<json::object::Object>) {
     /* HTTP Server initialization */
 
     // We'll bind to 127.0.0.1:3000
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
 
     // A `Service` is needed for every connection, so this
     // creates one from our `endpoint_impl` function.
-    let make_svc = make_service_fn(move |conn| {
+    let make_svc = make_service_fn(move |conn: &hyper::server::conn::AddrStream| {
         // Clone the broadcast sender before we create the service function itself.
         let tx_cfg = tx_cfg.clone();
-        print!("Got connection from {conn:?}\n");
+        let remote = conn.remote_addr();
+        print!("Got connection from {remote}\n");
 
         // This is the actual service function, which will reference a cloned tx_cfg.
         async move {
@@ -156,7 +157,7 @@ fn fb_main(args: &Args, mut rx_cfg: sync::broadcast::Receiver<json::object::Obje
     while args.frame_cnt == 0 || frame < args.frame_cnt {
         // Update config if there's anything new
         if let Ok(json_obj) = rx_cfg.try_recv() {
-            print!("Updated config");
+            print!("Updated config\n");
             update_cfg(json_obj, &mut state, &mut blocks);
         }
 
