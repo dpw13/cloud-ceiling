@@ -12,23 +12,34 @@ last_color = colour.Color("grey")
 
 while True:
     r = requests.get(DISPLAYCAL_URI, data=last_color.hex_l)
-    c = colour.Color(r.text)
+    f = r.split(" ")
+    c = colour.Color(rgb=f)
     if last_color != c:
         last_color = c
 
-        r = round(128.0 * c.red)
-        g = round(128.0 * c.green)
-        b = round(128.0 * c.blue)
-
-        print(f"{c} -> ({r} {g} {b}")
+        print(f"{c}")
 
         config = {
             "vars": {
-                "float": [0, 0, 0, 0],
-                "color": [{"r": r, "g": g, "b": b}],
+                "float": [0, 0, 0, 128],
+                "color": [{"r": 0, "g": 0, "b": 0}],
+                "rcolor": [{"r": c.red, "g": c.green, "b": c.blue}],
                 "position": []
             },
-            "primitives": [],
+            "primitives": [
+                {
+                    "type": "dither",
+                    "inputs": {
+                        "scale": 3,
+                        "i": 0,
+                        "x": 1,
+                        "y": 2
+                    },
+                    "outputs": {
+                        "o": 0
+                    }
+                }
+            ],
         }
         config_json = json.dumps(config)
 
