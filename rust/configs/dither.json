@@ -1,0 +1,22 @@
+{
+    "vars": {
+        "float": [0, 0, 0, 128],
+        "color": [{"r": 0, "g": 0, "b": 0}],
+        "rcolor": [{"r": 0.005, "g": 0.010, "b": 0.015}],
+        "position": []
+    },
+    "primitives": [
+        {
+            "type": "dither",
+            "inputs": {
+                "scale": 3,
+                "i": 0,
+                "x": 1,
+                "y": 2
+            },
+            "outputs": {
+                "o": 0
+            }
+        }
+    ]
+}

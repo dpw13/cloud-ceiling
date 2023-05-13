@@ -16,7 +16,7 @@ impl ColorInterp {
     pub fn from_obj(dict: &json::object::Object) -> Self {
         let input_obj = match dict.get("inputs").expect("Missing input definition") {
             JsonValue::Object(x) => x,
-            _ => panic!("Initialization for ColorInterp inputs is not a list"),
+            _ => panic!("Initialization for ColorInterp inputs is not an object"),
         };
 
         let color_array = match input_obj.get("color").expect("Missing color inputs") {
@@ -44,7 +44,7 @@ impl ColorInterp {
         let outputs = dict.get("outputs").expect("Missing input definition");
         let output_obj = match outputs {
             JsonValue::Object(x) => x,
-            _ => panic!("Initialization for ColorInterp outputs is not a list"),
+            _ => panic!("Initialization for ColorInterp outputs is not an object"),
         };
 
         let o_idx = output_obj.get("o").expect("Missing o output").as_usize().expect("Could not parse o output");
