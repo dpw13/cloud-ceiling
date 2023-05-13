@@ -14,13 +14,18 @@ while True:
     r = requests.get(DISPLAYCAL_URI, data=last_color.hex_l)
     c = colour.Color(r.text)
     if last_color != c:
-        print(f"{c}")
         last_color = c
+
+        r = round(128.0 * c.red)
+        g = round(128.0 * c.green)
+        b = round(128.0 * c.blue)
+
+        print(f"{c} -> ({r} {g} {b}")
 
         config = {
             "vars": {
                 "float": [0, 0, 0, 0],
-                "color": [{"r": round(32*c.red), "g": round(32*c.green), "b": round(32*c.blue)}],
+                "color": [{"r": r, "g": g, "b": b}],
                 "position": []
             },
             "primitives": [],
