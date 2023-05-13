@@ -1,7 +1,7 @@
 {
     "vars": {
         "float": [0, 0, 0, 0],
-        "color": [{"r": 32, "g": 25, "b": 20}],
+        "color": [{"r": 8, "g": 5, "b": 3}],
         "position": []
     },
     "primitives": [

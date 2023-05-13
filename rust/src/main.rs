@@ -20,6 +20,7 @@ mod animations;
 mod blocks;
 mod server;
 mod fb;
+mod var_types;
 
 fn init_config(args: &Args) -> json::object::Object {
     // Config
