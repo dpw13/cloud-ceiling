@@ -1,30 +1,27 @@
 #!/usr/bin/env python3
 
 import requests
-import colour
 import json
 import time
 
 DISPLAYCAL_URI = "http://localhost:8080/ajax/messages"
 FB_URI = "http://beaglebone:3000/set_config"
 
-last_color = colour.Color("grey")
+last_color = None
 
 while True:
-    r = requests.get(DISPLAYCAL_URI, data=last_color.hex_l)
-    print(f"Got color {r.text}\n")
-    f = r.text.split(" ")
-    c = colour.Color(rgb=f)
-    if last_color != c:
+    r = requests.get(DISPLAYCAL_URI)
+    c = list(map(lambda x: float(x), r.text.split(" ")))
+    if last_color is None or last_color != c:
         last_color = c
 
         print(f"{c}")
 
         config = {
             "vars": {
-                "float": [0, 0, 0, 128],
+                "float": [0, 0, 0, 96],
                 "color": [{"r": 0, "g": 0, "b": 0}],
-                "rcolor": [{"r": c.red, "g": c.green, "b": c.blue}],
+                "rcolor": [{"r": c[0], "g": c[1], "b": c[2]}],
                 "position": []
             },
             "primitives": [
