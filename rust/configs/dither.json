@@ -8,6 +8,12 @@
     "primitives": [
         {
             "type": "dither",
+            "params": {
+                "gamma": 2.4,
+                "rc": 1.50,
+                "gc": 0.88,
+                "bc": 0.47
+            },
             "inputs": {
                 "scale": 3,
                 "i": 0,

@@ -1,5 +1,5 @@
 use json::JsonValue;
-use num_traits::clamp;
+use num_traits::{clamp, Pow};
 //use rand::Rng;
 
 use crate::render_block::{RenderState, RenderBlock};
@@ -8,6 +8,11 @@ use crate::var_types::{Color};
 pub struct Dither {
     // Params
     dither_add: Box<[f32]>,
+    gamma: f32,
+    // color coefficients
+    rc: f32,
+    gc: f32,
+    bc: f32,
 
     // Inputs
     scale_idx: usize,
@@ -22,6 +27,15 @@ pub struct Dither {
 
 impl Dither {
     pub fn from_obj(dict: &json::object::Object) -> Self {
+        let input_obj = match dict.get("params").expect("Missing params definition") {
+            JsonValue::Object(x) => x,
+            _ => panic!("Initialization for Dither params is not an object"),
+        };
+        let gamma = input_obj.get("gamma").expect("Missing gamma input").as_f32().expect("Could not parse gamma input");
+        let rc = input_obj.get("rc").expect("Missing R coefficient input").as_f32().expect("Could not parse R coefficient input");
+        let gc = input_obj.get("gc").expect("Missing G coefficient input").as_f32().expect("Could not parse G coefficient input");
+        let bc = input_obj.get("bc").expect("Missing B coefficient input").as_f32().expect("Could not parse B coefficient input");
+
         let input_obj = match dict.get("inputs").expect("Missing input definition") {
             JsonValue::Object(x) => x,
             _ => panic!("Initialization for Dither inputs is not an object"),
@@ -59,7 +73,7 @@ impl Dither {
         // This definitely has a closed-form solution but let's just hard-code for now.
         let dither_add = Box::<[f32; 8]>::new([0.0/8.0, 4.0/8.0, 2.0/8.0, 6.0/8.0, 1.0/8.0, 5.0/8.0, 3.0/8.0, 7.0/8.0]);
 
-        Dither { dither_add, scale_idx, i_idx, x_idx, y_idx, o_idx }
+        Dither { dither_add, gamma, rc, gc, bc, scale_idx, i_idx, x_idx, y_idx, o_idx }
     }
 }
 
@@ -78,9 +92,9 @@ impl RenderBlock for Dither {
         let scale = state.get_scalar(self.scale_idx);
 
         let c = Color {
-            r: clamp((scale*rcolor.r + dither_offset).floor(), 0.0, 255.0) as u8,
-            g: clamp((scale*rcolor.g + dither_offset).floor(), 0.0, 255.0) as u8,
-            b: clamp((scale*rcolor.b + dither_offset).floor(), 0.0, 255.0) as u8,
+            r: clamp((scale*self.rc*rcolor.r.pow(self.gamma) + dither_offset).floor(), 0.0, 255.0) as u8,
+            g: clamp((scale*self.gc*rcolor.g.pow(self.gamma) + dither_offset).floor(), 0.0, 255.0) as u8,
+            b: clamp((scale*self.bc*rcolor.b.pow(self.gamma) + dither_offset).floor(), 0.0, 255.0) as u8,
         };
 
         state.set_color(self.o_idx, c);
