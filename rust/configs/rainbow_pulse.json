@@ -1,0 +1,77 @@
+{
+    "vars": {
+        "float": [
+            0, 0, 0, 255,
+            0.015, 0.023, -0.005, 0.0,
+            0.3, -0.8, 0.17, 0.0,
+            0.08, 0.2, 0.7, 0.0,
+            1.0
+        ],
+        "color": [{"r": 0, "g": 0, "b": 0}],
+        "rcolor": [{"r": 0.2, "g": 0.2, "b": 0.2}],
+        "position": []
+    },
+    "primitives": [
+        {
+            "type": "scalar_macc",
+            "inputs": {
+                "m": [4, 5, 6],
+                "x": [1, 2, 0]
+            },
+            "outputs": {
+                "o": 7
+            }
+        },
+        {
+            "type": "scalar_macc",
+            "inputs": {
+                "m": [8, 9, 10],
+                "x": [1, 2, 0]
+            },
+            "outputs": {
+                "o": 11
+            }
+        },
+        {
+            "type": "scalar_triangle",
+            "inputs": {
+                "f": 12,
+                "min": 13,
+                "max": 14,
+                "i": 11
+            },
+            "outputs": {
+                "o": 15
+            }
+        },
+        {
+            "type": "scalar_hsv2rgb",
+            "inputs": {
+                "h": 7,
+                "s": 16,
+                "v": 15
+            },
+            "outputs": {
+                "o": 0
+            }
+        },
+        {
+            "type": "dither",
+            "params": {
+                "gamma": 2.4,
+                "rc": 1.50,
+                "gc": 0.88,
+                "bc": 0.47
+            },
+            "inputs": {
+                "scale": 3,
+                "i": 0,
+                "x": 1,
+                "y": 2
+            },
+            "outputs": {
+                "o": 0
+            }
+        }
+    ]
+}

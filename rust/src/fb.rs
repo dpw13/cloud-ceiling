@@ -78,6 +78,12 @@ pub fn fb_main(args: &Args, mut rx_cfg: sync::broadcast::Receiver<json::object::
         //anim.render(frame, &mut fb);
         // Call ioctl to DMA to hardware
         disp.flush();
+
+        if args.debug {
+            state.debug();
+            //break;
+        }
+
         frame += 1;
     }
 

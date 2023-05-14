@@ -1,6 +1,9 @@
 pub mod scalar_add;
 pub mod color_interp;
 pub mod dither;
+pub mod scalar_macc;
+pub mod scalar_hsv2rgb;
+pub mod scalar_triangle;
 
 use json::JsonValue;
 
@@ -8,6 +11,9 @@ use crate::render_block::RenderBlock;
 use scalar_add::ScalarAdd;
 use color_interp::ColorInterp;
 use dither::Dither;
+use scalar_macc::ScalarMacc;
+use scalar_hsv2rgb::ScalarHsv2Rgb;
+use scalar_triangle::ScalarTriangle;
 
 pub fn block_factory(v: &JsonValue) -> Box<dyn RenderBlock> {
     let dict = match v {
@@ -19,6 +25,9 @@ pub fn block_factory(v: &JsonValue) -> Box<dyn RenderBlock> {
 
     match name {
         "scalar_add" => Box::new(ScalarAdd::from_obj(dict)),
+        "scalar_macc" => Box::new(ScalarMacc::from_obj(dict)),
+        "scalar_hsv2rgb" => Box::new(ScalarHsv2Rgb::from_obj(dict)),
+        "scalar_triangle" => Box::new(ScalarTriangle::from_obj(dict)),
         "color_interp" => Box::new(ColorInterp::from_obj(dict)),
         "dither" => Box::new(Dither::from_obj(dict)),
         _ => panic!("Unknown RenderBlock {}", name)

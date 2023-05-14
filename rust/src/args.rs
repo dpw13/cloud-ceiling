@@ -8,4 +8,7 @@ pub struct Args {
 
     #[arg(short, long, default_value_t = String::from("config.json"))]
     pub json: String,
+
+    #[arg(short, long, default_value_t = false)]
+    pub debug: bool,
 }

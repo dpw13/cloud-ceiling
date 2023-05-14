@@ -56,6 +56,13 @@ impl RenderState {
         &self.rcolors[idx]
     }
 
+    pub fn debug(&self) {
+        print!("Scalars: {:?}\n", self.scalars);
+        print!("Positions: {:?}\n", self.positions);
+        print!("Colors: {:?}\n", self.colors);
+        print!("RealColors: {:?}\n", self.rcolors);
+    }
+
     pub fn from_obj(&mut self, v: &JsonValue) {
         let dict = match v {
             JsonValue::Object(x) => x,
