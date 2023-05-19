@@ -14,6 +14,7 @@ use crate::constants;
 use crate::display::LedDisplay;
 use crate::render_block::{RenderBlock, RenderState};
 use crate::blocks::block_factory;
+use crate::msg::Message;
 
 fn update_cfg(json_obj: json::object::Object, state: &mut RenderState, blocks: &mut Vec<Box<dyn RenderBlock>>) {
     state.from_obj(json_obj.get("vars").expect("No vars stanza in JSON"));
@@ -27,9 +28,11 @@ fn update_cfg(json_obj: json::object::Object, state: &mut RenderState, blocks: &
     for b in block_list {
         blocks.push(block_factory(b));
     }
+
+    print!("Config updated\n");
 }
 
-pub fn fb_main(args: &Args, mut rx_cfg: sync::broadcast::Receiver<json::object::Object>) {
+pub fn fb_main(args: &Args, mut rx_cfg: sync::broadcast::Receiver<Message>) {
     /* Framebuffer initialization */
     // Initialize magick-wand
     magick_wand_genesis();
@@ -51,9 +54,19 @@ pub fn fb_main(args: &Args, mut rx_cfg: sync::broadcast::Receiver<json::object::
     let mut frame: u32 = 0;
     while args.frame_cnt == 0 || frame < args.frame_cnt {
         // Update config if there's anything new
-        if let Ok(json_obj) = rx_cfg.try_recv() {
-            print!("Updated config\n");
-            update_cfg(json_obj, &mut state, &mut blocks);
+        while let Ok(msg) = rx_cfg.try_recv() {
+            match msg {
+                Message::Config(json_obj) => update_cfg(json_obj, &mut state, &mut blocks),
+                Message::SetScalar(v) => {
+                    let idx = v.index;
+                    let val = v.value;
+                    print!("Scalar {idx} = {val}\n");
+                    state.set_scalar(v.index, v.value)
+                },
+                Message::SetPosition(v) => state.set_position(v.index, v.value),
+                Message::SetColor(v) => state.set_color(v.index, v.value),
+                Message::SetRColor(v) => state.set_rcolor(v.index, v.value),
+            }
         }
 
         state.set_scalar(0, frame as f32);

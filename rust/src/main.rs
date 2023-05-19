@@ -11,6 +11,7 @@ use json::JsonValue;
 use args::Args;
 use fb::fb_main;
 use server::server_setup;
+use msg::Message;
 
 mod args;
 mod render_block;
@@ -21,6 +22,7 @@ mod blocks;
 mod server;
 mod fb;
 mod var_types;
+mod msg;
 
 fn init_config(args: &Args) -> json::object::Object {
     // Config
@@ -54,12 +56,12 @@ fn main() {
         .unwrap();
 
     // Create the broadcast channel
-    let (tx_cfg, rx_cfg) = sync::broadcast::channel(1);
+    let (tx_cfg, rx_cfg) = sync::broadcast::channel(16);
     let server_tx_cfg = tx_cfg.clone();
 
     let cfg = init_config(&args);
 
-    if let Err(e) = tx_cfg.send(cfg) {
+    if let Err(e) = tx_cfg.send(Message::Config(cfg)) {
         print!("Error sending new config: {e}\n");
     }
 

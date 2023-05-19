@@ -25,7 +25,9 @@ impl RenderState {
     }
 
     pub fn set_scalar(&mut self, idx: usize, val: f32) {
-        self.scalars[idx] = val;
+        if idx < self.scalars.len() {
+            self.scalars[idx] = val;
+        }
     }
 
     pub fn get_scalar(&self, idx: usize) -> f32 {

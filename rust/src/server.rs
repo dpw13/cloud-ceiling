@@ -5,7 +5,9 @@ use json::JsonValue;
 use std::convert::Infallible;
 use std::net::SocketAddr;
 
-async fn endpoint_impl(req: Request<Body>, tx_cfg: sync::broadcast::Sender<json::object::Object>) -> Result<Response<Body>, Infallible> {
+use crate::msg::{Message, VarMsg};
+
+async fn endpoint_impl(req: Request<Body>, tx_cfg: sync::broadcast::Sender<Message>) -> Result<Response<Body>, Infallible> {
     let mut response = Response::new(Body::empty());
     let method = Method::to_owned(req.method());
     let uri = req.uri().clone();
@@ -17,7 +19,7 @@ async fn endpoint_impl(req: Request<Body>, tx_cfg: sync::broadcast::Sender<json:
 
             *response.status_mut() = match json::parse(&json_str) {
                 Ok(json_val) => match json_val {
-                    JsonValue::Object(json_obj) => match tx_cfg.send(json_obj) {
+                    JsonValue::Object(json_obj) => match tx_cfg.send(Message::Config(json_obj)) {
                         Ok(_) => StatusCode::OK,
                         Err(why) => {
                             print!("Failed to send config: {why}\n");
@@ -35,16 +37,46 @@ async fn endpoint_impl(req: Request<Body>, tx_cfg: sync::broadcast::Sender<json:
                 },
             };
         },
+        (&Method::POST, "/set_scalar") => {
+            let bytes = hyper::body::to_bytes(req.into_body()).await.unwrap();
+            let json_str = String::from_utf8(bytes.into_iter().collect()).expect("");
+
+            *response.status_mut() = match json::parse(&json_str) {
+                Ok(data) => match data {
+                    JsonValue::Object(data) => {
+                        // TODO: this error handling is lazy
+                        let index = data.get("index").unwrap().as_usize().unwrap();
+                        let value = data.get("value").unwrap().as_f32().unwrap();
+
+                        match tx_cfg.send(Message::SetScalar(VarMsg::<f32> {index, value})) {
+                            Ok(_) => StatusCode::OK,
+                            Err(why) => {
+                                print!("Failed to send scalar: {why}\n");
+                                StatusCode::INTERNAL_SERVER_ERROR
+                            },
+                        }
+                    }
+                    _ => {
+                        println!("JSON is not an object");
+                        StatusCode::BAD_REQUEST
+                    },
+                },
+                Err(why) => {
+                    print!("JSON parse failure: {why}\n");
+                    StatusCode::BAD_REQUEST
+                },
+            }
+        },
         _ => {
             *response.status_mut() = StatusCode::NOT_FOUND;
         },
     }
 
-    println!("{} {} -> {}", method, uri.path(), response.status());
+    //println!("{} {} -> {}", method, uri.path(), response.status());
     Ok(response)
 }
 
-pub async fn server_setup(tx_cfg: sync::broadcast::Sender<json::object::Object>) {
+pub async fn server_setup(tx_cfg: sync::broadcast::Sender<Message>) {
     /* HTTP Server initialization */
 
     // We'll bind to 127.0.0.1:3000
