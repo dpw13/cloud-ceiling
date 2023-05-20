@@ -1,4 +1,4 @@
-use crate::render_block::{RenderState, RenderBlock};
+use crate::render_block::{RenderBlock, RenderState};
 use json::JsonValue;
 
 pub struct ScalarMacc {
@@ -46,15 +46,23 @@ impl ScalarMacc {
             _ => panic!("Initialization for ScalarMacc outputs is not an object"),
         };
 
-        let o_idx = output_obj.get("o").expect("Missing o output").as_usize().expect("Could not parse o output");
+        let o_idx = output_obj
+            .get("o")
+            .expect("Missing o output")
+            .as_usize()
+            .expect("Could not parse o output");
 
-        ScalarMacc { m_idxs, x_idxs, o_idx }
+        ScalarMacc {
+            m_idxs,
+            x_idxs,
+            o_idx,
+        }
     }
 }
 
 impl RenderBlock for ScalarMacc {
     fn execute(&mut self, state: &mut RenderState) {
-        let mut out : f32 = 0.0;
+        let mut out: f32 = 0.0;
         for (m_idx, x_idx) in self.m_idxs.iter().zip(&self.x_idxs) {
             out += state.get_scalar(*m_idx) * state.get_scalar(*x_idx);
         }

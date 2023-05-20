@@ -5,24 +5,24 @@ use std::io::prelude::*;
 
 use tokio::sync;
 
-use clap::{Parser};
+use clap::Parser;
 use json::JsonValue;
 
 use args::Args;
 use fb::fb_main;
-use server::server_setup;
 use msg::Message;
+use server::server_setup;
 
+mod animations;
 mod args;
-mod render_block;
+mod blocks;
 mod constants;
 mod display;
-mod animations;
-mod blocks;
-mod server;
 mod fb;
-mod var_types;
 mod msg;
+mod render_block;
+mod server;
+mod var_types;
 
 fn init_config(args: &Args) -> json::object::Object {
     // Config
@@ -67,5 +67,4 @@ fn main() {
 
     rt.spawn(async move { server_setup(server_tx_cfg).await });
     rt.block_on(async move { fb_main(&args, rx_cfg) });
-
 }

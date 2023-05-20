@@ -1,13 +1,16 @@
-use hyper::{Body, Request, Response, Server, Method, StatusCode};
 use hyper::service::{make_service_fn, service_fn};
-use tokio::sync;
+use hyper::{Body, Method, Request, Response, Server, StatusCode};
 use json::JsonValue;
 use std::convert::Infallible;
 use std::net::SocketAddr;
+use tokio::sync;
 
 use crate::msg::{Message, VarMsg};
 
-async fn endpoint_impl(req: Request<Body>, tx_cfg: sync::broadcast::Sender<Message>) -> Result<Response<Body>, Infallible> {
+async fn endpoint_impl(
+    req: Request<Body>,
+    tx_cfg: sync::broadcast::Sender<Message>,
+) -> Result<Response<Body>, Infallible> {
     let mut response = Response::new(Body::empty());
     let method = Method::to_owned(req.method());
     let uri = req.uri().clone();
@@ -24,19 +27,19 @@ async fn endpoint_impl(req: Request<Body>, tx_cfg: sync::broadcast::Sender<Messa
                         Err(why) => {
                             print!("Failed to send config: {why}\n");
                             StatusCode::INTERNAL_SERVER_ERROR
-                        },
-                    }
+                        }
+                    },
                     _ => {
                         println!("JSON is not an object");
                         StatusCode::BAD_REQUEST
-                    },
+                    }
                 },
                 Err(why) => {
                     print!("JSON parse failure: {why}\n");
                     StatusCode::BAD_REQUEST
-                },
+                }
             };
-        },
+        }
         (&Method::POST, "/set_scalar") => {
             let bytes = hyper::body::to_bytes(req.into_body()).await.unwrap();
             let json_str = String::from_utf8(bytes.into_iter().collect()).expect("");
@@ -48,28 +51,28 @@ async fn endpoint_impl(req: Request<Body>, tx_cfg: sync::broadcast::Sender<Messa
                         let index = data.get("index").unwrap().as_usize().unwrap();
                         let value = data.get("value").unwrap().as_f32().unwrap();
 
-                        match tx_cfg.send(Message::SetScalar(VarMsg::<f32> {index, value})) {
+                        match tx_cfg.send(Message::SetScalar(VarMsg::<f32> { index, value })) {
                             Ok(_) => StatusCode::OK,
                             Err(why) => {
                                 print!("Failed to send scalar: {why}\n");
                                 StatusCode::INTERNAL_SERVER_ERROR
-                            },
+                            }
                         }
                     }
                     _ => {
                         println!("JSON is not an object");
                         StatusCode::BAD_REQUEST
-                    },
+                    }
                 },
                 Err(why) => {
                     print!("JSON parse failure: {why}\n");
                     StatusCode::BAD_REQUEST
-                },
+                }
             }
-        },
+        }
         _ => {
             *response.status_mut() = StatusCode::NOT_FOUND;
-        },
+        }
     }
 
     //println!("{} {} -> {}", method, uri.path(), response.status());
@@ -93,7 +96,7 @@ pub async fn server_setup(tx_cfg: sync::broadcast::Sender<Message>) {
         // This is the actual service function, which will reference a cloned tx_cfg.
         async move {
             // service_fn converts our function into a `Service`
-            Ok::<_, Infallible>(service_fn(move |req| { endpoint_impl(req, tx_cfg.clone()) }))
+            Ok::<_, Infallible>(service_fn(move |req| endpoint_impl(req, tx_cfg.clone())))
         }
     });
 

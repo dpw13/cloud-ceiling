@@ -1,4 +1,4 @@
-use crate::render_block::{RenderState, RenderBlock};
+use crate::render_block::{RenderBlock, RenderState};
 use crate::var_types::RealColor;
 use json::JsonValue;
 
@@ -21,18 +21,39 @@ impl ScalarHsv2Rgb {
             _ => panic!("Initialization for ScalarHsv2Rgb inputs is not an object"),
         };
 
-        let h_idx = input_obj.get("h").expect("Missing h input").as_usize().expect("Could not parse h input");
-        let s_idx = input_obj.get("s").expect("Missing s input").as_usize().expect("Could not parse s input");
-        let v_idx = input_obj.get("v").expect("Missing v input").as_usize().expect("Could not parse v input");
+        let h_idx = input_obj
+            .get("h")
+            .expect("Missing h input")
+            .as_usize()
+            .expect("Could not parse h input");
+        let s_idx = input_obj
+            .get("s")
+            .expect("Missing s input")
+            .as_usize()
+            .expect("Could not parse s input");
+        let v_idx = input_obj
+            .get("v")
+            .expect("Missing v input")
+            .as_usize()
+            .expect("Could not parse v input");
 
         let output_obj = match dict.get("outputs").expect("Missing output definition") {
             JsonValue::Object(x) => x,
             _ => panic!("Initialization for ScalarHsv2Rgb outputs is not an object"),
         };
 
-        let o_idx = output_obj.get("o").expect("Missing o output").as_usize().expect("Could not parse o output");
+        let o_idx = output_obj
+            .get("o")
+            .expect("Missing o output")
+            .as_usize()
+            .expect("Could not parse o output");
 
-        ScalarHsv2Rgb { h_idx, s_idx, v_idx, o_idx }
+        ScalarHsv2Rgb {
+            h_idx,
+            s_idx,
+            v_idx,
+            o_idx,
+        }
     }
 }
 
@@ -50,13 +71,13 @@ impl RenderBlock for ScalarHsv2Rgb {
         let sector = hp.floor().rem_euclid(6.0) as u8;
 
         let rcolor = match sector {
-            0 => RealColor {r: c, g: x, b: 0.0},
-            1 => RealColor {r: x, g: c, b: 0.0},
-            2 => RealColor {r: 0.0, g: c, b: x},
-            3 => RealColor {r: 0.0, g: x, b: c},
-            4 => RealColor {r: x, g: 0.0, b: c},
-            5 => RealColor {r: c, g: 0.0, b: x},
-            x => panic!("Invalid HSV sector {x}")
+            0 => RealColor { r: c, g: x, b: 0.0 },
+            1 => RealColor { r: x, g: c, b: 0.0 },
+            2 => RealColor { r: 0.0, g: c, b: x },
+            3 => RealColor { r: 0.0, g: x, b: c },
+            4 => RealColor { r: x, g: 0.0, b: c },
+            5 => RealColor { r: c, g: 0.0, b: x },
+            x => panic!("Invalid HSV sector {x}"),
         };
 
         state.set_rcolor(self.o_idx, rcolor);

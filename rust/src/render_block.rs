@@ -1,5 +1,5 @@
-use json::JsonValue;
 use crate::var_types::*;
+use json::JsonValue;
 
 pub struct RenderState {
     scalars: Vec<f32>,
@@ -21,7 +21,12 @@ impl RenderState {
         let colors = Vec::<Color>::with_capacity(1);
         let rcolors = Vec::<RealColor>::with_capacity(0);
 
-        RenderState {scalars, positions, colors, rcolors}
+        RenderState {
+            scalars,
+            positions,
+            colors,
+            rcolors,
+        }
     }
 
     pub fn set_scalar(&mut self, idx: usize, val: f32) {
@@ -77,10 +82,14 @@ impl RenderState {
         };
         self.scalars.clear();
         for o in list {
-            self.scalars.push(o.as_f32().expect("Failed to interpret scalar value"));
+            self.scalars
+                .push(o.as_f32().expect("Failed to interpret scalar value"));
         }
 
-        let list = match dict.get("position").expect("Missing 'positions' initialization") {
+        let list = match dict
+            .get("position")
+            .expect("Missing 'positions' initialization")
+        {
             JsonValue::Array(x) => x,
             _ => panic!("Initialization for positions is not a list"),
         };
@@ -98,7 +107,10 @@ impl RenderState {
             self.colors.push(Color::from_obj(o));
         }
 
-        let list = match dict.get("rcolor").expect("Missing 'rcolors' initialization") {
+        let list = match dict
+            .get("rcolor")
+            .expect("Missing 'rcolors' initialization")
+        {
             JsonValue::Array(x) => x,
             _ => panic!("Initialization for rcolors is not a list"),
         };

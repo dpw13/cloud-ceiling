@@ -1,25 +1,31 @@
-
-use std::time::{Duration, Instant};
 use std::thread::sleep;
+use std::time::{Duration, Instant};
 use std::vec::Vec;
 
-use magick_rust::{magick_wand_genesis};
+use magick_rust::magick_wand_genesis;
 
 use tokio::sync;
 
 use json::JsonValue;
 
 use crate::args::Args;
+use crate::blocks::block_factory;
 use crate::constants;
 use crate::display::LedDisplay;
-use crate::render_block::{RenderBlock, RenderState};
-use crate::blocks::block_factory;
 use crate::msg::Message;
+use crate::render_block::{RenderBlock, RenderState};
 
-fn update_cfg(json_obj: json::object::Object, state: &mut RenderState, blocks: &mut Vec<Box<dyn RenderBlock>>) {
+fn update_cfg(
+    json_obj: json::object::Object,
+    state: &mut RenderState,
+    blocks: &mut Vec<Box<dyn RenderBlock>>,
+) {
     state.from_obj(json_obj.get("vars").expect("No vars stanza in JSON"));
 
-    let block_list = match json_obj.get("primitives").expect("No primitives stanza in JSON") {
+    let block_list = match json_obj
+        .get("primitives")
+        .expect("No primitives stanza in JSON")
+    {
         JsonValue::Array(x) => x,
         _ => panic!("Primitives stanza is not an array"),
     };
@@ -62,7 +68,7 @@ pub fn fb_main(args: &Args, mut rx_cfg: sync::broadcast::Receiver<Message>) {
                     let val = v.value;
                     print!("Scalar {idx} = {val}\n");
                     state.set_scalar(v.index, v.value)
-                },
+                }
                 Message::SetPosition(v) => state.set_position(v.index, v.value),
                 Message::SetColor(v) => state.set_color(v.index, v.value),
                 Message::SetRColor(v) => state.set_rcolor(v.index, v.value),
@@ -100,7 +106,12 @@ pub fn fb_main(args: &Args, mut rx_cfg: sync::broadcast::Receiver<Message>) {
         frame += 1;
     }
 
-    println!("{} frames in {:?}. Spent {:?} in flush.", args.frame_cnt, now.elapsed(), disp.wait_time.get());
+    println!(
+        "{} frames in {:?}. Spent {:?} in flush.",
+        args.frame_cnt,
+        now.elapsed(),
+        disp.wait_time.get()
+    );
 
     // Wait for last frame to flush
     sleep(Duration::from_millis(5));

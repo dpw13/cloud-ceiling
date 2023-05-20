@@ -1,4 +1,4 @@
-use crate::render_block::{RenderState, RenderBlock};
+use crate::render_block::{RenderBlock, RenderState};
 use json::JsonValue;
 
 pub struct ScalarTriangle {
@@ -20,19 +20,45 @@ impl ScalarTriangle {
             _ => panic!("Initialization for ScalarTriangle inputs is not an object"),
         };
 
-        let f_idx = input_obj.get("f").expect("Missing frequency input").as_usize().expect("Could not parse frequency input");
-        let min_idx = input_obj.get("min").expect("Missing min input").as_usize().expect("Could not parse min input");
-        let max_idx = input_obj.get("max").expect("Missing max input").as_usize().expect("Could not parse max input");
-        let i_idx = input_obj.get("i").expect("Missing i input").as_usize().expect("Could not parse i input");
+        let f_idx = input_obj
+            .get("f")
+            .expect("Missing frequency input")
+            .as_usize()
+            .expect("Could not parse frequency input");
+        let min_idx = input_obj
+            .get("min")
+            .expect("Missing min input")
+            .as_usize()
+            .expect("Could not parse min input");
+        let max_idx = input_obj
+            .get("max")
+            .expect("Missing max input")
+            .as_usize()
+            .expect("Could not parse max input");
+        let i_idx = input_obj
+            .get("i")
+            .expect("Missing i input")
+            .as_usize()
+            .expect("Could not parse i input");
 
         let output_obj = match dict.get("outputs").expect("Missing output definition") {
             JsonValue::Object(x) => x,
             _ => panic!("Initialization for ScalarTriangle outputs is not an object"),
         };
 
-        let o_idx = output_obj.get("o").expect("Missing o output").as_usize().expect("Could not parse o output");
+        let o_idx = output_obj
+            .get("o")
+            .expect("Missing o output")
+            .as_usize()
+            .expect("Could not parse o output");
 
-        ScalarTriangle { f_idx, min_idx, max_idx, i_idx, o_idx }
+        ScalarTriangle {
+            f_idx,
+            min_idx,
+            max_idx,
+            i_idx,
+            o_idx,
+        }
     }
 }
 

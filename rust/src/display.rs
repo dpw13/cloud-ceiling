@@ -1,11 +1,11 @@
+use memmap::{MmapMut, MmapOptions};
+use nix::ioctl_write_int_bad;
 use std::cell::{Cell, RefCell, RefMut};
 use std::fs;
 use std::fs::File;
-use std::os::fd::{AsRawFd};
+use std::os::fd::AsRawFd;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
-use memmap::{MmapMut, MmapOptions};
-use nix::ioctl_write_int_bad;
 use volatile::Volatile;
 
 use crate::constants;
@@ -47,67 +47,71 @@ pub struct FpgaRegisters {
     rsvd4: Volatile<u16>,
     fifo_status: Volatile<u16>, // 0x10
     empty_count: Volatile<u16>, // 0x12
-    blank: Volatile<u16>, // 0x14
+    blank: Volatile<u16>,       // 0x14
 }
 
 impl LedDisplay {
     pub fn new() -> Self {
-        let f_mem = fs::OpenOptions::new().read(true)
-                                    .write(true)
-                                    .open("/dev/mem")
-                                    .unwrap();
+        let f_mem = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open("/dev/mem")
+            .unwrap();
 
         // Create a new memory map builder and build a map for the registers.
         let mmap_regs = RefCell::new(unsafe {
             MmapOptions::new()
-                        .offset(constants::FPGA_REGS_BASE)
-                        .len(constants::FPGA_REGS_SIZE)
-                        .map_mut(&f_mem)
-                        .expect("Failed to mmap register region")
+                .offset(constants::FPGA_REGS_BASE)
+                .len(constants::FPGA_REGS_SIZE)
+                .map_mut(&f_mem)
+                .expect("Failed to mmap register region")
         });
 
         let regs = mmap_regs.borrow_mut().as_mut_ptr() as *mut FpgaRegisters;
 
         // Memory map the ledfb
-        let f_fb = fs::OpenOptions::new().read(true)
-                                    .write(true)
-                                    .open("/dev/ledfb")
-                                    .expect("Could not open LED framebuffer device");
+        let f_fb = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open("/dev/ledfb")
+            .expect("Could not open LED framebuffer device");
 
         let mmap_fb = unsafe {
             MmapOptions::new()
-                        .offset(0)
-                        .len(constants::FIFO_DATA_SIZE)
-                        .map_mut(&f_fb)
-                        .expect("Failed to mmap framebuffer")
+                .offset(0)
+                .len(constants::FIFO_DATA_SIZE)
+                .map_mut(&f_fb)
+                .expect("Failed to mmap framebuffer")
         };
 
         let fb_cell = RefCell::new(mmap_fb);
         let wait_time = Cell::new(Duration::from_millis(0));
 
-        LedDisplay {mmap_regs, regs, f_fb, fb_cell, wait_time}
+        LedDisplay {
+            mmap_regs,
+            regs,
+            f_fb,
+            fb_cell,
+            wait_time,
+        }
     }
 
     // MmapMut has same lifetime as LedDisplay
     pub fn borrow_fb<'a>(&'a self) -> RefMut<[u8]> {
         let mut_fb = self.fb_cell.borrow_mut();
-        let (begin, mut _end) = 
-            RefMut::map_split(mut_fb, 
-                |slice| slice.split_at_mut(constants::FRAME_SIZE_BYTES));
+        let (begin, mut _end) = RefMut::map_split(mut_fb, |slice| {
+            slice.split_at_mut(constants::FRAME_SIZE_BYTES)
+        });
 
         begin
     }
 
     pub fn read_id(&self) -> u16 {
-        unsafe {
-            (*self.regs).id.read()
-        }
+        unsafe { (*self.regs).id.read() }
     }
 
     pub fn empty_count(&self) -> usize {
-        unsafe {
-            (*self.regs).empty_count.read() as usize
-        }
+        unsafe { (*self.regs).empty_count.read() as usize }
     }
 
     pub fn flush(&self) -> () {
@@ -120,8 +124,7 @@ impl LedDisplay {
         self.wait_time.set(self.wait_time.get() + now.elapsed());
 
         unsafe {
-            flush_buffer(fd, constants::FRAME_SIZE_BYTES as i32)
-                .expect("IOCTL error");
+            flush_buffer(fd, constants::FRAME_SIZE_BYTES as i32).expect("IOCTL error");
         }
     }
 }

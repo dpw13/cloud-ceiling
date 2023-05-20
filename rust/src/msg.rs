@@ -1,5 +1,5 @@
-use json;
 use crate::var_types;
+use json;
 
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
 pub struct VarMsg<T> {

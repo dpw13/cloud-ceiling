@@ -1,6 +1,6 @@
 use json::JsonValue;
-use std::ops::{Mul, Add};
 use num_traits::clamp;
+use std::ops::{Add, Mul};
 
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
 pub struct Position {
@@ -15,10 +15,18 @@ impl Position {
             _ => panic!("Position is not an object"),
         };
 
-        let x = dict.get("x").expect("No x parameter in Position").as_f32().expect("Failed to interpret x parameter");
-        let y = dict.get("y").expect("No y parameter in Position").as_f32().expect("Failed to interpret y parameter");
+        let x = dict
+            .get("x")
+            .expect("No x parameter in Position")
+            .as_f32()
+            .expect("Failed to interpret x parameter");
+        let y = dict
+            .get("y")
+            .expect("No y parameter in Position")
+            .as_f32()
+            .expect("Failed to interpret y parameter");
 
-        Position {x, y}
+        Position { x, y }
     }
 }
 
@@ -60,11 +68,23 @@ impl Color {
             _ => panic!("Color is not an object"),
         };
 
-        let r = dict.get("r").expect("No r parameter in Color").as_u8().expect("Failed to interpret r parameter");
-        let g = dict.get("g").expect("No g parameter in Color").as_u8().expect("Failed to interpret g parameter");
-        let b = dict.get("b").expect("No b parameter in Color").as_u8().expect("Failed to interpret b parameter");
+        let r = dict
+            .get("r")
+            .expect("No r parameter in Color")
+            .as_u8()
+            .expect("Failed to interpret r parameter");
+        let g = dict
+            .get("g")
+            .expect("No g parameter in Color")
+            .as_u8()
+            .expect("Failed to interpret g parameter");
+        let b = dict
+            .get("b")
+            .expect("No b parameter in Color")
+            .as_u8()
+            .expect("Failed to interpret b parameter");
 
-        Color {r, g, b}
+        Color { r, g, b }
     }
 }
 
@@ -122,11 +142,23 @@ impl RealColor {
             _ => panic!("RealColor is not an object"),
         };
 
-        let r = dict.get("r").expect("No r parameter in Color").as_f32().expect("Failed to interpret r parameter");
-        let g = dict.get("g").expect("No g parameter in Color").as_f32().expect("Failed to interpret g parameter");
-        let b = dict.get("b").expect("No b parameter in Color").as_f32().expect("Failed to interpret b parameter");
+        let r = dict
+            .get("r")
+            .expect("No r parameter in Color")
+            .as_f32()
+            .expect("Failed to interpret r parameter");
+        let g = dict
+            .get("g")
+            .expect("No g parameter in Color")
+            .as_f32()
+            .expect("Failed to interpret g parameter");
+        let b = dict
+            .get("b")
+            .expect("No b parameter in Color")
+            .as_f32()
+            .expect("Failed to interpret b parameter");
 
-        Self {r, g, b}
+        Self { r, g, b }
     }
 }
 
