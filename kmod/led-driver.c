@@ -203,6 +203,12 @@ static int __init led_driver_init(void)
                 goto failed_dev_create;
         }
 
+        ret = dma_coerce_mask_and_coherent(ledfb_dev.dev, DMA_BIT_MASK(32));
+        if (ret) {
+                dev_err(ledfb_dev.dev, "Failed to set DMA mask\n");
+                goto failed_map_mask;
+        }
+
         /* Find DMA device */
         dmaengine_get();
 
@@ -233,11 +239,11 @@ static int __init led_driver_init(void)
 
         /* Map buffer for DMA */
 	ledfb_dev.src_handle = dma_map_single(ledfb_dev.dev, ledfb_dev.fb, BUFFER_SIZE, DMA_TO_DEVICE);
-	if (dma_mapping_error(ledfb_dev.dev, ledfb_dev.src_handle)) {
+        if (dma_mapping_error(ledfb_dev.dev, ledfb_dev.src_handle)) {
                 dev_err(ledfb_dev.dev, "Failed to map buffer for DMA\n");
                 ret = -ENXIO;
                 goto failed_map;
-	}
+        }
 
         /* Map registers */
         ledfb_dev.regs = (uint16_t *)ioremap(FPGA_REG_ADDR, REG_SIZE);
@@ -258,6 +264,7 @@ failed_alloc:
         //dma_release_channel(ledfb_dev.chan); // exclusive access only
 failed_dma_req:
         dmaengine_put();
+failed_map_mask:
         device_destroy(ledfb_class, MKDEV(ledfb_dev.major, 1));
 failed_dev_create:
         class_destroy(ledfb_class);
