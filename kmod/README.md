@@ -20,3 +20,5 @@ Driver notes
 echo 'file dmaengine.c +p'>/sys/kernel/debug/dynamic_debug/control
 echo 'file edma.c +p'>/sys/kernel/debug/dynamic_debug/control
 echo 'file virt-dma.c +p'>/sys/kernel/debug/dynamic_debug/control
+
+- DTS compilation probably doesn't work correctly. Copy DTS into kernel source and build there.
