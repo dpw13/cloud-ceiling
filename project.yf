@@ -5,8 +5,7 @@ ghdl --no-formal \
     VHDL/Fifo/FifoCounterHalf.vhd \
     VHDL/Fifo/DpRam.vhd \
     VHDL/Fifo/DpParityRam.vhd \
-    VHDL/Fifo/SimpleFifo.vhd \
-    VHDL/Fifo/RedundantFifo.vhd -e SimpleFifo
+    VHDL/Fifo/SimpleFifo.vhd -e SimpleFifo
 
 ghdl --no-formal \
     VHDL/Packages/PkgUtils.vhd \
@@ -18,6 +17,7 @@ write_verilog out/SimpleFifo.v
 read_verilog Verilog/pll.v
 read_verilog Verilog/gpmc_sync.v
 read_verilog Verilog/string_driver.v
+read_verilog Verilog/extra_strings.v
 read_verilog Verilog/parallel_strings.v
 read_verilog Verilog/top.v
 

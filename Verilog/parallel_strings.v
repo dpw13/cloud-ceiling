@@ -9,7 +9,8 @@ module parallel_strings #(
     parameter N_LEDS_PER_STRING = 150,
     parameter FIFO_ADDR_WIDTH = 12,
     parameter FIFO_DATA_WIDTH = 16,
-    parameter INIT_COLOR = 24'h0C1006 // GGRRBB
+    //parameter INIT_COLOR = 24'h0C1006 // GGRRBB
+    parameter INIT_COLOR = 24'h0
 ) (
     input clk,
     input reset,

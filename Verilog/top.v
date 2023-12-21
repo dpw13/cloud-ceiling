@@ -17,7 +17,8 @@ module top(
 	input         gpmc_clk,
 
 	// LED string interface
-	output [22:0]  led_sdi
+	output [22:0]  color_led_sdi,
+	output [3:0]  white_led_sdi
 );
 
 	localparam GPMC_ADDR_WIDTH = 16;
@@ -26,12 +27,16 @@ module top(
 	localparam FIFO_DATA_WIDTH = 16;
 
 	// Testbench params
-	//localparam N_STRINGS = 5;
-	//localparam N_LEDS_PER_STRING = 8;
+	//localparam N_COLOR_STRINGS = 5;
+	//localparam N_WHITE_STRINGS = 2;
+	//localparam N_COLOR_LEDS_PER_STRING = 24;
+	//localparam N_WHITE_LEDS_PER_STRING = 24;
 
 	// Production params
-	localparam N_STRINGS = 23;
-	localparam N_LEDS_PER_STRING = 236;
+	localparam N_COLOR_STRINGS = 23;
+	localparam N_WHITE_STRINGS = 4;
+	localparam N_COLOR_LEDS_PER_STRING = 236;
+	localparam N_WHITE_LEDS_PER_STRING = 118;
 
 	wire clk_20;
 	wire pll_locked;
@@ -171,7 +176,8 @@ module top(
 			fifo_underflow_latched <= 1'b1;
 	end
 
-	reg gpmc_hblank = 0;
+	reg color_valid = 1'b0;
+	reg [23:0] color_in = 24'h400818; // Cold Red Warm
 
 	always @(posedge gpmc_clk)
 	begin : FIFO_REGS
@@ -193,14 +199,17 @@ module top(
 		end
 
 		fifo_clear_err <= 1'b0;
-		gpmc_hblank <= 1'b0;
+		color_valid <= 1'b0;
 		// Write registers
 		if (gpmc_wr_en) begin
 			if (gpmc_address == 16'h10) begin
 				// Set bit zero to clear FIFO errors
 				fifo_clear_err <= gpmc_data_out[0];
 			end else if (gpmc_address == 16'h14) begin
-				gpmc_hblank <= gpmc_data_out[0];
+				color_in[15:0] <= gpmc_data_out;
+			end else if (gpmc_address == 16'h16) begin
+				color_in[23:16] <= gpmc_data_out[7:0];
+				color_valid <= 1'b1;
 			end
 		end
 	end
@@ -260,23 +269,23 @@ module top(
 		.oEvent(fifo_underflow)
 	);
 
-	// Bring HBLANK register bit to clk_20
-	wire h_blank;
-	EventXing hblank_xing (
+	// Bring color_valid bit to clk_20
+	wire color_valid_20;
+	EventXing color_valid_xing (
 		.IClk(gpmc_clk),
 		.iReady(),
-		.iEvent(gpmc_hblank),
+		.iEvent(color_valid),
 		.OClk(clk_20),
-		.oEvent(h_blank)
+		.oEvent(color_valid_20)
 	);
 
 	// String drivers
 	parallel_strings #(
-		.N_STRINGS(N_STRINGS),
-		.N_LEDS_PER_STRING(N_LEDS_PER_STRING),
+		.N_STRINGS(N_COLOR_STRINGS),
+		.N_LEDS_PER_STRING(N_COLOR_LEDS_PER_STRING),
 		.FIFO_ADDR_WIDTH(FIFO_ADDR_WIDTH),
 		.FIFO_DATA_WIDTH(FIFO_DATA_WIDTH)
-	) all_strings (
+	) color_strings (
 		.clk(clk_20),
 		.reset(reset_20),
 		.fifo_full_count(pxl_fifo_full_count),
@@ -284,9 +293,24 @@ module top(
 		.fifo_data_valid(pxl_fifo_data_valid),
 		.fifo_read(pxl_fifo_read),
 
-		.h_blank_in(h_blank),
+		.h_blank_in(1'b0),
 		.string_active(led[0]),
-		.led_sdi(led_sdi[N_STRINGS-1:0])
+		.led_sdi(color_led_sdi[N_COLOR_STRINGS-1:0])
+	);
+
+	extra_strings #(
+		.N_STRINGS(N_WHITE_STRINGS),
+		.N_LEDS_PER_STRING(N_WHITE_LEDS_PER_STRING)
+	) white_strings (
+		.clk(clk_20),
+		.reset(reset_20),
+
+		.color_valid(color_valid_20),
+		.color_in(color_in),
+
+		.h_blank_in(1'b0),
+		.string_active(led[3]),
+		.led_sdi(white_led_sdi)
 	);
 
 endmodule

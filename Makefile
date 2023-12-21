@@ -9,13 +9,13 @@ VER_SRC = \
 	Verilog/pll.v \
 	Verilog/gpmc_sync.v \
 	Verilog/string_driver.v \
+	Verilog/extra_strings.v \
 	Verilog/parallel_strings.v \
 	Verilog/top.v
 
 VER_TB_SRC = Verilog/Testbench/tb_top.v
 
 VHDL_SRC = \
-	VHDL/Fifo/RedundantFifo.vhd \
 	VHDL/Fifo/FifoCounterHalf.vhd \
 	VHDL/Fifo/DpRam.vhd \
 	VHDL/Fifo/SimpleFifo.vhd \

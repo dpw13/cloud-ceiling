@@ -30,7 +30,8 @@ reg         gpmc_csn1;
 reg         gpmc_wein;
 reg         gpmc_oen;
 
-wire [22:0] led_sdi;
+wire [22:0] color_led_sdi;
+wire [3:0] white_led_sdi;
 
 assign gpmc_ad_in = gpmc_ad;
 assign gpmc_ad = (gpmc_oen) ? gpmc_ad_out : 16'bZ;
@@ -49,7 +50,8 @@ top #(
     .gpmc_oen(gpmc_oen),
     .gpmc_clk(gpmc_clk),
 
-    .led_sdi(led_sdi)
+    .color_led_sdi(color_led_sdi),
+    .white_led_sdi(white_led_sdi)
 );
 
 always #PERIOD_100 clk_100=~clk_100;
@@ -74,7 +76,7 @@ for (string=0; string < N_STRINGS; string = string+1) begin
     // WS2812B model
     realtime sdi_rise, sdi_fall;
     realtime sdi_high, sdi_low;
-    always @ (negedge led_sdi[string])
+    always @ (negedge color_led_sdi[string])
     begin
         sdi_fall <= $realtime();
     end
@@ -85,7 +87,7 @@ for (string=0; string < N_STRINGS; string = string+1) begin
     integer pixel_count = 0;
     integer frame_count = -1;
 
-    always @ (posedge led_sdi[string])
+    always @ (posedge color_led_sdi[string])
     begin
         sdi_high = sdi_fall - sdi_rise;
         sdi_low = $realtime() - sdi_fall;
@@ -93,7 +95,7 @@ for (string=0; string < N_STRINGS; string = string+1) begin
 
         if (sdi_low > 50_000) begin
             // We don't care about high time in this case
-            $display("HBLANK string %d, start frame %d", string, frame_count + 1);
+            $display("HBLANK string %0d, start frame %0d", string, frame_count + 1);
             led_data = 0;
             bit_count = 0;
             pixel_count = 0;
@@ -106,7 +108,7 @@ for (string=0; string < N_STRINGS; string = string+1) begin
             led_data = { led_data[22:0], 1'b1 };
             bit_count = bit_count + 1;
         end else if ($realtime > 0) begin
-            $display("ERROR: Invalid bit time on string %d at %t ns: %t high %t low", string, sdi_rise, sdi_high, sdi_low);
+            $display("ERROR: Invalid bit time on string %0d at %0t ns: %0t high %0t low", string, sdi_rise, sdi_high, sdi_low);
         end
 
         if (bit_count == 24) begin
@@ -116,10 +118,10 @@ for (string=0; string < N_STRINGS; string = string+1) begin
                 frame_data[frame_count][3*(N_STRINGS*pixel_count+string)+0] };
 
             if (led_data != led_expected) begin
-                $display("ERROR: Data mismatch frame %d string %d pixel %d: got 0x%06x expected 0x%06x", frame_count, string, pixel_count, led_data, led_expected);
+                $display("ERROR: Data mismatch frame %0d string %0d pixel %0d: got 0x%06x expected 0x%06x", frame_count, string, pixel_count, led_data, led_expected);
                 $finish();
             end else begin
-                $display("Data MATCH frame %d string %d pixel %d: got 0x%06x expected 0x%06x", frame_count, string, pixel_count, led_data, led_expected);
+                $display("Data MATCH frame %0d string %0d pixel %0d: got 0x%06x expected 0x%06x", frame_count, string, pixel_count, led_data, led_expected);
             end
             pixel_count = pixel_count + 1;
             bit_count = 0;
@@ -308,6 +310,10 @@ initial begin
             gpmc_wr(16'h1000, temp_data);
         end
     end
+
+    // update white color
+    gpmc_wr(16'h0014, 16'h3456);
+    gpmc_wr(16'h0016, 16'h0012);
 
     // Access some other register to get the GPMC data through
     gpmc_rd(16'h0000, temp_data);
