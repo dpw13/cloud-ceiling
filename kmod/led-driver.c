@@ -71,7 +71,7 @@ static long ioctl_ledfb(struct file *filp, unsigned int ioctl_num, unsigned long
                                 FPGA_FIFO_ADDR, // destination bus address
                                 buf_start, // src bus address
                                 buf_size, // size
-                                0); // dma_ctrl_flags
+                                DMA_PREP_INTERRUPT); // dma_ctrl_flags
 
                         if (!tx) {
                                 dev_err(ledfb_dev.dev, "Failed to create TX descriptor\n");
@@ -87,6 +87,8 @@ static long ioctl_ledfb(struct file *filp, unsigned int ioctl_num, unsigned long
                 if (dma_submit_error(cookie)) {
                         dev_err(ledfb_dev.dev, "Failed to submit TX descriptor");
                         return -EINVAL;
+                } else {
+                        dev_dbg(ledfb_dev.dev, "TX descr submitted %px-%px\n", (void *)buf_start, (void *)buf_start+buf_size);
                 }
 
                 buf_start += buf_size;
