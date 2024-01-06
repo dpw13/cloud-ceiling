@@ -2,10 +2,11 @@
     "vars": {
         "float": [
             0, 0, 0, 1.0,
-            0.015, 0.023, -0.005, 0.0,
-            0.3, -0.8, 0.17, 0.0,
-            0.08, 0.2, 0.7, 0.0,
-            1.0
+            0.1, 0.2, -0.3, 0.0,
+            0.3, 0.0, 0.17, 0.0,
+            0.2, -0.3, 0.4, 0.0,
+            0.1, 0.0, 0.4, 0.0,
+            0.1, 0.5, 0.5
         ],
         "color": [{"r": 0, "g": 0, "b": 0}],
         "rcolor": [{"r": 0.2, "g": 0.2, "b": 0.2}],
@@ -13,6 +14,7 @@
     },
     "primitives": [
         {
+            "name": "linear phase 1",
             "type": "scalar_macc",
             "inputs": {
                 "m": [4, 5, 6],
@@ -23,40 +25,66 @@
             }
         },
         {
-            "type": "scalar_macc",
+            "name": "waveform 1",
+            "type": "scalar_triangle",
             "inputs": {
-                "m": [8, 9, 10],
-                "x": [1, 2, 0]
+                "f": 8,
+                "min": 9,
+                "max": 10,
+                "i": 7
             },
             "outputs": {
                 "o": 11
             }
         },
         {
-            "type": "scalar_triangle",
+            "name": "linear phase 2",
+            "type": "scalar_macc",
             "inputs": {
-                "f": 12,
-                "min": 13,
-                "max": 14,
-                "i": 11
+                "m": [12, 13, 14],
+                "x": [1, 2, 0]
             },
             "outputs": {
                 "o": 15
             }
         },
         {
+            "name": "waveform 2",
+            "type": "scalar_triangle",
+            "inputs": {
+                "f": 16,
+                "min": 17,
+                "max": 18,
+                "i": 15
+            },
+            "outputs": {
+                "o": 19
+            }
+        },
+        {
+            "name": "waveform combine",
+            "type": "scalar_add",
+            "inputs": {
+                "a": 11,
+                "b": 19
+            },
+            "outputs": {
+                "o": 20
+            }
+        },
+        {
             "type": "scalar_hsv2rgb",
             "inputs": {
-                "h": 7,
-                "s": 16,
-                "v": 15
+                "h": 20,
+                "s": 21,
+                "v": 22
             },
             "outputs": {
                 "o": 0
             }
         },
         {
-            "type": "dither",
+            "type": "gamma",
             "params": {
                 "gamma": 2.4,
                 "rc": 1.50,
