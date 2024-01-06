@@ -48,12 +48,12 @@ set_io gpmc_oen 20
 # 2 E|  |E 3
 #    ----  *
 #
-# B1 . * A1    G . . G
-# B2 . . A2   +3 . . +3
+# B1 . * A1   +3 . . +3
+# B2 . . A2    G . . G
 # B3 . . A3   A4 . . B4
 # B4 . . A4   A3 . . B3
-# +3 . . +3   A2 . . B2
-#  G . . G    A1 * . B1
+#  G . . G    A2 . . B2
+# +3 . . +3   A1 * . B1
 
 
 set_io color_led_sdi[15] 7  # PMOD4 B1
