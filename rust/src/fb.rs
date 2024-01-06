@@ -63,12 +63,7 @@ pub fn fb_main(args: &Args, mut rx_cfg: sync::broadcast::Receiver<Message>) {
         while let Ok(msg) = rx_cfg.try_recv() {
             match msg {
                 Message::Config(json_obj) => update_cfg(json_obj, &mut state, &mut blocks),
-                Message::SetScalar(v) => {
-                    let idx = v.index;
-                    let val = v.value;
-                    print!("Scalar {idx} = {val}\n");
-                    state.set_scalar(v.index, v.value)
-                }
+                Message::SetScalar(v) => state.set_scalar(v.index, v.value),
                 Message::SetPosition(v) => state.set_position(v.index, v.value),
                 Message::SetColor(v) => state.set_color(v.index, v.value),
                 Message::SetRColor(v) => state.set_rcolor(v.index, v.value),

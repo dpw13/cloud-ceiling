@@ -15,7 +15,6 @@ pub struct Dither {
     bc: f32,
 
     // Inputs
-    scale_idx: usize,
     i_idx: usize,
 
     x_idx: usize,
@@ -57,11 +56,6 @@ impl Dither {
             _ => panic!("Initialization for Dither inputs is not an object"),
         };
 
-        let scale_idx = input_obj
-            .get("scale")
-            .expect("Missing scale input")
-            .as_usize()
-            .expect("Could not parse scale input");
         let i_idx = input_obj
             .get("i")
             .expect("Missing i input")
@@ -124,7 +118,6 @@ impl Dither {
             rc,
             gc,
             bc,
-            scale_idx,
             i_idx,
             x_idx,
             y_idx,
@@ -148,21 +141,20 @@ impl RenderBlock for Dither {
         // Look up dither offset from phase
         let dither_offset = self.dither_add[dither_phase];
         //let dither_offset = rng.gen_range(0.0..1.0);
-        let scale = state.get_scalar(self.scale_idx);
 
         let c = Color {
             r: clamp(
-                (scale * self.rc * rcolor.r.pow(self.gamma) + dither_offset).floor(),
+                (255.0 * self.rc * rcolor.r.pow(self.gamma) + dither_offset).floor(),
                 0.0,
                 255.0,
             ) as u8,
             g: clamp(
-                (scale * self.gc * rcolor.g.pow(self.gamma) + dither_offset).floor(),
+                (255.0 * self.gc * rcolor.g.pow(self.gamma) + dither_offset).floor(),
                 0.0,
                 255.0,
             ) as u8,
             b: clamp(
-                (scale * self.bc * rcolor.b.pow(self.gamma) + dither_offset).floor(),
+                (255.0 * self.bc * rcolor.b.pow(self.gamma) + dither_offset).floor(),
                 0.0,
                 255.0,
             ) as u8,
