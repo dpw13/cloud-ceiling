@@ -1,5 +1,6 @@
 pub mod color_interp;
 pub mod dither;
+pub mod gamma;
 pub mod scalar_add;
 pub mod scalar_hsv2rgb;
 pub mod scalar_macc;
@@ -11,6 +12,7 @@ use json::JsonValue;
 use crate::render_block::RenderBlock;
 use color_interp::ColorInterp;
 use dither::Dither;
+use gamma::Gamma;
 use scalar_add::ScalarAdd;
 use scalar_hsv2rgb::ScalarHsv2Rgb;
 use scalar_macc::ScalarMacc;
@@ -32,6 +34,7 @@ pub fn block_factory(v: &JsonValue) -> Box<dyn RenderBlock> {
     match name {
         "color_interp" => Box::new(ColorInterp::from_obj(dict)),
         "dither" => Box::new(Dither::from_obj(dict)),
+        "gamma" => Box::new(Gamma::from_obj(dict)),
         "scalar_add" => Box::new(ScalarAdd::from_obj(dict)),
         "scalar_hsv2rgb" => Box::new(ScalarHsv2Rgb::from_obj(dict)),
         "scalar_macc" => Box::new(ScalarMacc::from_obj(dict)),
