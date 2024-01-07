@@ -1,0 +1,15 @@
+addrmap template {
+    name = "UVM Template Regs"
+
+    default regwidth = 16;
+    default sw = rw;
+    default hw = r;
+
+    reg {
+        name = "Scratch"
+
+        field {
+            desc = "Scratch field"
+        } DATA[15:0] = 0;
+    } SCRATCH @ 0x0;
+};

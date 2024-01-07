@@ -1,0 +1,38 @@
+
+all:
+
+UVM_VERSION=1800.2-2020-2.0
+UVM_FILE_VER=$(shell echo ${UVM_VERSION} | sed -e 's/\.//g')
+
+CCFLAGS=-DQUESTA -Wno-missing-declarations
+
+deps/uvm/src/uvm_pkg.sv:
+	$(eval uvm_tmp := $(shell mktemp))
+	$(eval uvm_src := $(shell mktemp -d))
+	wget https://www.accellera.org/images/downloads/standards/uvm/UVM-${UVM_FILE_VER}tar.gz -O ${uvm_tmp}
+	tar -zxf ${uvm_tmp} -C ${uvm_src}
+	rm -rf deps/uvm
+	mv ${uvm_src}/${UVM_VERSION} deps/uvm
+	rm -r ${uvm_src}
+	rm ${uvm_tmp}
+
+# Note that the order here does matter
+sources.list: deps/uvm/src/uvm_pkg.sv
+	echo deps/uvm/src/uvm_pkg.sv > sources.list
+	echo deps/uvm/src/dpi/uvm_dpi.cc >> sources.list
+	find hdl -name 'pkg_*.sv' >> sources.list
+	find hdl -name '*.sv' | grep -v "/pkg_" >> sources.list
+
+.PHONY: compile vsim clean
+
+compile: sources.list
+	vlog +incdir+deps/uvm/src -ccflags "${CCFLAGS}" -sv17compat -F sources.list
+
+# 32-bit builds on WSL need to additionally be pointed to this folder, which includes
+# (almost exclusively) libstdc++
+vsim: compile
+	vsim -ldflags "-L/usr/lib/gcc/i686-linux-gnu/11/" +UVM_NO_RELNOTES tb_dflop
+
+clean:
+	rm -r work
+	rm sources.list
