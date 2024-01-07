@@ -99,7 +99,11 @@ package pkg_gpmc_config;
         bit [5:0] base_address = 0;
     endclass
 
-    class gpmc_config extends uvm_object;
+    class gpmc_config #(
+        parameter ADDR_WIDTH = 16,
+        parameter DATA_WIDTH = 16,
+        parameter CS_COUNT = 8
+    ) extends uvm_object;
         // SYSCONFIG
         bit auto_idle = 0;
 
@@ -116,7 +120,7 @@ package pkg_gpmc_config;
         gpmc_cs_config cs_config [7:0];
 
         // interface
-        virtual gpmc_if vif;
+        virtual gpmc_if #(.ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH)) vif;
 
         function new(string name="gpmc_config");
             super.new(name);

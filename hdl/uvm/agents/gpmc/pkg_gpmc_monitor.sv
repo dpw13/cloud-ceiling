@@ -10,7 +10,7 @@ package pkg_gpmc_monitor;
     ) extends uvm_monitor;
         `uvm_component_utils(gpmc_monitor)
 
-        gpmc_config cfg;
+        gpmc_config #(.ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH)) cfg;
         virtual gpmc_if #(.ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH)) vif;
 
         // Separate analysis ports for each CS
@@ -24,9 +24,9 @@ package pkg_gpmc_monitor;
             super.build_phase(phase);
 
             foreach (analysis_port[i])
-                analysis_port[i] = new("analysis_port", this);
+                analysis_port[i] = new($sformatf("analysis_port[%0d]", i), this);
 
-            if(!uvm_config_db#(virtual gpmc_config)::get(this, "", "gpmc_cfg", cfg))
+            if(!uvm_config_db#(gpmc_config#(.ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH)))::get(this, "", "gpmc_cfg", cfg))
                 `uvm_fatal(get_type_name(), "Could not get GPMC config")
 
             // TODO: validate config
@@ -53,8 +53,10 @@ package pkg_gpmc_monitor;
                 while (&vif.cs_n)
                     @(posedge vif.clk);
 
+                `uvm_info(get_type_name(), $sformatf("CS assert: %0x", vif.cs_n), UVM_LOW)
+
                 foreach(vif.cs_n[i]) begin
-                    if (~vif.cs_n[i]) begin
+                    if (vif.cs_n[i] == 1'b0) begin
                         if (cs_id < 0)
                             cs_id = i;
                         else
@@ -62,12 +64,14 @@ package pkg_gpmc_monitor;
                     end
                 end
 
-                while (~vif.cs_n[cs_id]) begin
+                `uvm_info(get_type_name(), $sformatf("CS id: %0d", cs_id), UVM_LOW)
+
+                while (cs_id >= 0 && vif.cs_n[cs_id] == 1'b0) begin
                     int data_phase_countdown = -1;
 
                     if (~vif.adv_n_ale) begin
                         int bit_offset;
-                        if (~vif.oe_n) begin
+                        if (~vif.oe_n_re_n) begin
                             // first AAD phase. The documentation isn't super clear about how
                             // the full address is muxed onto the A and D lines. Let's assume
                             // the specified addr and data width is used for each phase.
@@ -90,7 +94,7 @@ package pkg_gpmc_monitor;
                             addr[bit_offset +: DATA_WIDTH] = vif.data[0 +: DATA_WIDTH];
                             addr[bit_offset + DATA_WIDTH +: ADDR_WIDTH] = vif.addr[0 +: ADDR_WIDTH];
                         end
-                    end else if (~vif.oe_n) begin
+                    end else if (~vif.oe_n_re_n) begin
                         // if OEn asserts without ADVn, that indicates a read
                         // The GPMC read timing is specified relative to the start of CS. Compute
                         // the delay from OEn to a read.
@@ -134,6 +138,7 @@ package pkg_gpmc_monitor;
                     // wait monitoring
                     if (wait_pin_id < 0 || vif.wait_[wait_pin_id] != wait_active) begin
                         if (data_phase_countdown == 0) begin
+                            `uvm_info(get_type_name(), "data phase", UVM_LOW)
                             payload.push_back(vif.data[7:0]);
                             byte_enable.push_back(vif.be0_n_cle);
 

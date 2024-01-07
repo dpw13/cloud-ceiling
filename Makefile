@@ -16,26 +16,31 @@ VER_SRC = \
 VER_TB_SRC = Verilog/Testbench/tb_top.v
 
 VHDL_SRC = \
-	VHDL/Fifo/FifoCounterHalf.vhd \
-	VHDL/Fifo/DpRam.vhd \
-	VHDL/Fifo/SimpleFifo.vhd \
-	VHDL/Fifo/DpParityRam.vhd \
-	VHDL/ClockXing/VectorXing.vhd \
-	VHDL/ClockXing/EventXing.vhd \
-	VHDL/Packages/PkgUtils.vhd
+	hdl/VHDL/Packages/PkgUtils.vhd \
+	hdl/VHDL/ClockXing/EventXing.vhd \
+	hdl/VHDL/ClockXing/VectorXing.vhd \
+	hdl/VHDL/Fifo/DpRam.vhd \
+	hdl/VHDL/Fifo/DpParityRam.vhd \
+	hdl/VHDL/Fifo/FifoCounterHalf.vhd \
+	hdl/VHDL/Fifo/SimpleFifo.vhd
 
-TOP_TB_ENT = tb_top
+TOP_TB_ENT = tb_led_top
 TOP_ENT = top
 
 PROJ_FILE = project.yf
 PIN_SRC = physical.pcf
 PREPACK_PY = timing.py
 
+UVM_VERSION=1800.2-2020-2.0
+UVM_FILE_VER=$(shell echo ${UVM_VERSION} | sed -e 's/\.//g')
+
+CCFLAGS=-DQUESTA -Wno-missing-declarations
+
 Q = @
 
 ICECUBE = /opt/lscc/iCEcube2.2020.12
 
-.PHONY: all load clean build_libs sim vsim
+.PHONY: all load clean compile vsim vsimc
 
 all: $(BUILD)/$(PROJ).bin
 
@@ -60,20 +65,41 @@ $(BUILD)/$(PROJ).bin : $(BUILD)/$(PROJ).asc
 	@ echo -e "\x0\x0\x0\x0\x0\x0\x0" >> $(BUILD)/$(PROJ).bin
 	@ echo " Done"
 
-build_libs:
+modelsim/modelsim.mpf:
 	mkdir -p modelsim
-	cp -f ${MODELSIM}/modelsim.ini modelsim/modelsim.mpf
+	cp -f ${MODELSIM_BASE}/modelsim.ini modelsim/modelsim.mpf
 	cd modelsim && vlib work && vmap -modelsimini modelsim.mpf work work
 	@ # libs are already in ice_vlg lib
 
-sim:
-	cd modelsim && vlog -modelsimini modelsim.mpf $(addprefix ../, ${VER_SRC}) ../out/SimpleFifo.v $(addprefix ../, ${VER_TB_SRC})
+deps/uvm/src/uvm_pkg.sv:
+	$(eval uvm_tmp := $(shell mktemp))
+	$(eval uvm_src := $(shell mktemp -d))
+	wget https://www.accellera.org/images/downloads/standards/uvm/UVM-${UVM_FILE_VER}tar.gz -O ${uvm_tmp}
+	tar -zxf ${uvm_tmp} -C ${uvm_src}
+	rm -rf deps/uvm
+	mkdir -p deps
+	mv ${uvm_src}/${UVM_VERSION} deps/uvm
+	rm -r ${uvm_src}
+	rm ${uvm_tmp}
 
-vsim:
-	cd modelsim && vsim -modelsimini modelsim.mpf -t ns ${TOP_TB_ENT} -L ice_vlg
+# Note that the order here does matter
+modelsim/sources.list: deps/uvm/src/uvm_pkg.sv
+	mkdir -p modelsim
+	echo ../deps/uvm/src/uvm_pkg.sv > modelsim/sources.list
+	echo ../deps/uvm/src/dpi/uvm_dpi.cc >> modelsim/sources.list
+	cd modelsim && find ../hdl -name '*.v' >> sources.list
+	cd modelsim && find ../hdl -name 'pkg_*.sv' >> sources.list
+	cd modelsim && find ../hdl -name '*.sv' | grep -v "/pkg_" >> sources.list
 
-vsimc:
-	cd modelsim && vsim -c -modelsimini modelsim.mpf -t ns ${TOP_TB_ENT} -L ice_vlg
+compile: modelsim/sources.list modelsim/modelsim.mpf
+	cd modelsim && vlog -modelsimini modelsim.mpf +incdir+../deps/uvm/src -ccflags "${CCFLAGS}" -sv17compat -F sources.list
+	cd modelsim && vcom -modelsimini modelsim.mpf $(addprefix "../",${VHDL_SRC})
+
+vsim: compile
+	cd modelsim && vsim -modelsimini modelsim.mpf -t ns ${TOP_TB_ENT} +UVM_NO_RELNOTES -L ice_vlg
+
+vsimc: compile
+	cd modelsim && vsim -c -modelsimini modelsim.mpf -t ns ${TOP_TB_ENT} +UVM_NO_RELNOTES -L ice_vlg
 
 load:
 	sh /home/debian/load-fw/bw-prog.sh $(BUILD)/$(PROJ).bin

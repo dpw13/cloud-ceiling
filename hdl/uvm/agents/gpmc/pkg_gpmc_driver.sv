@@ -10,7 +10,7 @@ package pkg_gpmc_driver;
     ) extends uvm_driver#(uvm_tlm_generic_payload);
         `uvm_component_utils(gpmc_driver)
 
-        gpmc_config cfg;
+        gpmc_config #(.ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH)) cfg;
         virtual gpmc_if #(.ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH)) vif;
 
         function new(string name="gpmc_driver", uvm_component parent = null);
@@ -20,12 +20,13 @@ package pkg_gpmc_driver;
         virtual function void build_phase(uvm_phase phase);
             super.build_phase(phase);
 
-            if(!uvm_config_db#(virtual gpmc_config)::get(this, "", "gpmc_cfg", cfg))
+            if(!uvm_config_db#(gpmc_config#(.ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH)))::get(this, "", "gpmc_cfg", cfg))
                 `uvm_fatal(get_type_name(), "Could not get GPMC config")
         endfunction
 
         virtual function void connect_phase(uvm_phase phase);
             vif = cfg.vif;
+            vif.cs_n = '1;
         endfunction;
 
         virtual task run_phase(uvm_phase phase);

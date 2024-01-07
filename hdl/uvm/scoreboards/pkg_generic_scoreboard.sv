@@ -37,7 +37,7 @@ package pkg_generic_scoreboard;
             end else begin
                 expected = exp.pop_front();
                 if (!expected.compare(item)) begin
-                    `uvm_error(get_type_name(), $sformatf("Comparison mismatch: %s != %s", expected.convert2str(), item.convert2str()))
+                    `uvm_error(get_type_name(), $sformatf("Comparison mismatch: %s != %s", expected.convert2string(), item.convert2string()))
                 end
             end
         endfunction

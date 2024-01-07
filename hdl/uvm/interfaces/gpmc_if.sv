@@ -5,9 +5,9 @@ interface gpmc_if #(
 );
     bit fclk;
     bit clk;
-    logic addr[ADDR_WIDTH-1:0];
-    logic data[DATA_WIDTH-1:0];
-    logic cs_n[CS_COUNT-1:0];
+    logic [ADDR_WIDTH-1:0] addr;
+    wire [DATA_WIDTH-1:0] data;
+    logic [CS_COUNT-1:0] cs_n;
     logic adv_n_ale;
     logic oe_n_re_n;
     logic we_n;
