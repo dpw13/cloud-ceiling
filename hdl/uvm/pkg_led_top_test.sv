@@ -33,10 +33,19 @@ package pkg_led_top_test;
             uvm_config_db#(gpmc_config#(.ADDR_WIDTH(21)))::set(this, "m_env.m_gpmc_agent.*", "gpmc_cfg", m_gpmc_cfg);
         endfunction
 
-        virtual task run_phase(uvm_phase phase);
+        virtual task reset_phase(uvm_phase phase);
+            super.main_phase(phase);
+
+            phase.raise_objection(this);
+            // Yes, I know this should be a sequence...
+            #1100ns;
+            phase.drop_objection(this);
+        endtask
+
+        virtual task main_phase(uvm_phase phase);
             cloud_ceiling_test_seq seq = cloud_ceiling_test_seq::type_id::create("seq");
 
-            super.run_phase(phase);
+            super.main_phase(phase);
 
             phase.raise_objection(this);
             seq.start(m_env.m_gpmc_agent.s0);

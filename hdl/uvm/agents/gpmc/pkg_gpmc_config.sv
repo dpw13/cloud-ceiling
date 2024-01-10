@@ -1,3 +1,5 @@
+`include "uvm_macros.svh"
+
 package pkg_gpmc_config;
     import uvm_pkg::*;
 
@@ -36,6 +38,9 @@ package pkg_gpmc_config;
     } fclk_divider_t;
 
     class gpmc_cs_config extends uvm_object;
+        `uvm_object_utils_begin(gpmc_cs_config)
+        `uvm_object_utils_end
+
         // CONFIG1
         bit wrap_burst = 0;
         bit read_multiple = 0;
@@ -97,6 +102,14 @@ package pkg_gpmc_config;
         bit [3:0] mask_address = 0;
         bit cs_valid = 0;
         bit [5:0] base_address = 0;
+
+        function new(string name="gpmc_cs_config");
+            super.new(name);
+        endfunction //new()
+
+        virtual function string convert2string();
+            return $sformatf("GPMC CS cfg valid = %0d", cs_valid);
+        endfunction
     endclass
 
     class gpmc_config #(
@@ -104,6 +117,9 @@ package pkg_gpmc_config;
         parameter DATA_WIDTH = 16,
         parameter CS_COUNT = 8
     ) extends uvm_object;
+        `uvm_object_param_utils_begin(gpmc_config#(.ADDR_WIDTH(ADDR_WIDTH)))
+        `uvm_object_utils_end
+
         // SYSCONFIG
         bit auto_idle = 0;
 
@@ -124,6 +140,8 @@ package pkg_gpmc_config;
 
         function new(string name="gpmc_config");
             super.new(name);
+            foreach (cs_config[i])
+                cs_config[i] = gpmc_cs_config::type_id::create($sformatf("cs_config[%0d]", i));
         endfunction //new()
     endclass //gpmc_config extends uvm_object
 endpackage

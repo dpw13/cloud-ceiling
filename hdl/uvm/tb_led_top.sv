@@ -12,7 +12,7 @@ module tb_led_top;
     logic glbl_reset;
 
     gpmc_if #(.ADDR_WIDTH(21)) gpmc_iface();
-    gpmc_config #(.ADDR_WIDTH(21)) cfg = new;
+    gpmc_config #(.ADDR_WIDTH(21)) cfg;
 
     always #5 clk_100 <= ~clk_100;
     always #5 fclk <= ~fclk;
@@ -38,6 +38,7 @@ module tb_led_top;
     );
 
     initial begin
+        cfg = gpmc_config#(.ADDR_WIDTH(21))::type_id::create("cfg", null);
         cfg.vif = gpmc_iface;
         uvm_config_db#(gpmc_config#(.ADDR_WIDTH(21)))::set(null, "", "gpmc_cfg", cfg);
         run_test("led_top_test");
@@ -45,6 +46,7 @@ module tb_led_top;
 
     initial begin
         // Minimum reset pulse width is 1 us
+        gpmc_iface.cs_n = 16'hFF;
         glbl_reset <= 1'b1;
         #1023ns;
         glbl_reset <= 1'b0;

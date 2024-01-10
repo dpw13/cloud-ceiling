@@ -26,7 +26,14 @@ package pkg_gpmc_driver;
 
         virtual function void connect_phase(uvm_phase phase);
             vif = cfg.vif;
-            vif.cs_n = '1;
+            vif.cs_n <= '1;
+            vif.clk <= 1'b0;
+            vif.adv_n_ale <= 1'b1;
+            vif.oe_n_re_n <= 1'b1;
+            vif.we_n <= 1'b1;
+            vif.be0_n_cle <= 1'b1;
+            vif.be1_n <= 1'b1;
+            vif.driver_cb.data <= 'z;
         endfunction;
 
         virtual task run_phase(uvm_phase phase);
@@ -40,8 +47,57 @@ package pkg_gpmc_driver;
             end
         endtask
 
+        task tick(int div=4, int cnt=1);
+            // TODO: proper clocking
+            repeat (cnt) begin
+                #1ns;
+                vif.clk <= 1'b1;
+                repeat (div) @(posedge vif.fclk);
+                #1ns;
+                vif.clk <= 1'b0;
+                repeat (div) @(posedge vif.fclk);
+            end
+        endtask
+
         virtual task drive_item(uvm_tlm_generic_payload req);
-            @(posedge vif.clk);
+            int cs_id = 1; // TODO: find CS from addr map
+
+            `uvm_info(get_type_name(), $sformatf("Register request: %s", req.convert2string()), UVM_LOW)
+
+            // TODO: proper generalized timing
+            // This should basically just be an FCLK counter that twiddles bits at the
+            // configured time.
+            vif.cs_n[cs_id] <= 1'b0;
+            // TODO: proper AD muxing
+            vif.driver_cb.data <= req.m_address[15:0];
+            vif.adv_n_ale <= 1'b0;
+            tick();
+            vif.driver_cb.data <= 'z;
+            vif.adv_n_ale <= 1'b1;
+
+            if (req.is_write()) begin
+                // write
+                vif.driver_cb.data <= {req.m_data[0], req.m_data[1]};
+                vif.we_n <= 1'b0;
+                tick();
+                vif.we_n <= 1'b1;
+                vif.driver_cb.data <= 'z;
+                tick();
+            end else begin
+                byte unsigned data[] = new[2];
+                // read
+                tick();
+                vif.oe_n_re_n <= 1'b0;
+                tick(.cnt(2));
+                vif.oe_n_re_n <= 1'b1;
+                data[0] = vif.driver_cb.data[7:0];
+                data[1] = vif.driver_cb.data[15:8];
+                req.set_data_length(2);
+                req.set_data(data);
+            end
+
+            req.set_response_status(UVM_TLM_OK_RESPONSE);
+            vif.cs_n <= '1;
         endtask
     endclass
 

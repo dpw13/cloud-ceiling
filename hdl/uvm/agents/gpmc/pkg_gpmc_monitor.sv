@@ -43,39 +43,45 @@ package pkg_gpmc_monitor;
             forever begin
                 // Create new access each time
                 uvm_tlm_generic_payload req = new;
-                int cs_id = -1;
+                int cs_id = 0;
+                bit cs_active = 1'b0;
                 bit [63:0] addr = 0;
                 byte unsigned payload[$];
                 bit byte_enable[$];
                 int wait_pin_id = -1;
                 bit wait_active = 1'b0;
+                gpmc_cs_config cs_cfg;
 
                 while (&vif.cs_n)
                     @(posedge vif.clk);
 
-                `uvm_info(get_type_name(), $sformatf("CS assert: %0x", vif.cs_n), UVM_LOW)
-
+                cs_active = 1'b0;
                 foreach(vif.cs_n[i]) begin
                     if (vif.cs_n[i] == 1'b0) begin
-                        if (cs_id < 0)
+                        if (!cs_active) begin
                             cs_id = i;
-                        else
+                            cs_active = 1'b1;
+                            cs_cfg = cfg.cs_config[i];
+                            `uvm_info(get_type_name(), $sformatf("Selected CS %0d using config %s", i, cs_cfg.convert2string()), UVM_LOW)
+                        end else begin
                             `uvm_error(get_type_name(), $sformatf("CS %0d and %0d asserted simultaneously", cs_id, i))
+                        end
                     end
                 end
 
-                `uvm_info(get_type_name(), $sformatf("CS id: %0d", cs_id), UVM_LOW)
+                `uvm_info(get_type_name(), $sformatf("CS assert: %0x ID %0d active %0d", vif.cs_n, cs_id, cs_active), UVM_LOW)
 
-                while (cs_id >= 0 && vif.cs_n[cs_id] == 1'b0) begin
+                while (cs_active && vif.cs_n[cs_id] == 1'b0) begin
                     int data_phase_countdown = -1;
 
                     if (~vif.adv_n_ale) begin
                         int bit_offset;
+
                         if (~vif.oe_n_re_n) begin
                             // first AAD phase. The documentation isn't super clear about how
                             // the full address is muxed onto the A and D lines. Let's assume
                             // the specified addr and data width is used for each phase.
-                            if (cfg.cs_config[cs_id].mux_addr_data == no_mux) begin
+                            if (cs_cfg.mux_addr_data == no_mux) begin
                                 bit_offset = ADDR_WIDTH;
                             end else begin
                                 bit_offset = ADDR_WIDTH + DATA_WIDTH;
@@ -85,7 +91,8 @@ package pkg_gpmc_monitor;
                             bit_offset = 0;
                         end
 
-                        if (cfg.cs_config[cs_id].mux_addr_data == no_mux) begin
+
+                        if (cs_cfg.mux_addr_data == no_mux) begin
                             // If address/data are not muxed, load the address only from the
                             // address lines.
                             addr[bit_offset +: ADDR_WIDTH] = vif.addr[0 +: ADDR_WIDTH];
@@ -94,6 +101,8 @@ package pkg_gpmc_monitor;
                             addr[bit_offset +: DATA_WIDTH] = vif.data[0 +: DATA_WIDTH];
                             addr[bit_offset + DATA_WIDTH +: ADDR_WIDTH] = vif.addr[0 +: ADDR_WIDTH];
                         end
+
+                        `uvm_info(get_type_name(), $sformatf("CS %0d ADV_n ADDR %0x", cs_id, addr), UVM_LOW)
                     end else if (~vif.oe_n_re_n) begin
                         // if OEn asserts without ADVn, that indicates a read
                         // The GPMC read timing is specified relative to the start of CS. Compute
@@ -101,15 +110,18 @@ package pkg_gpmc_monitor;
                         assert (!req.is_write()) else
                             `uvm_error(get_type_name(), "OEn asserted after WEn")
                         if (data_phase_countdown == -1) begin
-                            int rd_delay = cfg.cs_config[cs_id].rd_access_time - cfg.cs_config[cs_id].oe_on_time;
+                            int rd_delay = cs_cfg.rd_access_time - cs_cfg.oe_on_time;
+                            `uvm_info(get_type_name(), $sformatf("CS %0d OE_n, delay %0d", cs_id, rd_delay), UVM_LOW)
                             // Convert from FCLK period to CLK period
-                            data_phase_countdown = rd_delay/(cfg.cs_config[cs_id].gpmc_fclk_divider + 1);
+                            data_phase_countdown = rd_delay/(cs_cfg.gpmc_fclk_divider + 1);
                             req.set_read();
                             req.set_address(addr);
 
-                            if (cfg.cs_config[cs_id].wait_read_monitoring) begin
-                                wait_pin_id = cfg.cs_config[cs_id].wait_pin_select;
+                            if (cs_cfg.wait_read_monitoring) begin
+                                wait_pin_id = cs_cfg.wait_pin_select;
                                 wait_active = cfg.wait_pin_polarity[wait_pin_id];
+                            end else begin
+                                wait_pin_id = -1;
                             end
                         end
                     end // address phase or read command
@@ -122,15 +134,18 @@ package pkg_gpmc_monitor;
                         assert (!req.is_read()) else
                             `uvm_error(get_type_name(), "WEn asserted after OEn")
                         if (data_phase_countdown == -1) begin
-                            int wr_delay = cfg.cs_config[cs_id].wr_access_time - cfg.cs_config[cs_id].we_on_time;
+                            int wr_delay = cs_cfg.wr_access_time - cs_cfg.we_on_time;
+                            `uvm_info(get_type_name(), $sformatf("CS %0d WE_n, delay %0d", cs_id, wr_delay), UVM_LOW)
                             // Convert from FCLK period to CLK period
-                            data_phase_countdown = wr_delay/(cfg.cs_config[cs_id].gpmc_fclk_divider + 1);
+                            data_phase_countdown = wr_delay/(cs_cfg.gpmc_fclk_divider + 1);
                             req.set_write();
                             req.set_address(addr);
 
-                            if (cfg.cs_config[cs_id].wait_write_monitoring) begin
-                                wait_pin_id = cfg.cs_config[cs_id].wait_pin_select;
+                            if (cs_cfg.wait_write_monitoring) begin
+                                wait_pin_id = cs_cfg.wait_pin_select;
                                 wait_active = cfg.wait_pin_polarity[wait_pin_id];
+                            end else begin
+                                wait_pin_id = -1;
                             end
                         end
                     end // write command
@@ -138,11 +153,11 @@ package pkg_gpmc_monitor;
                     // wait monitoring
                     if (wait_pin_id < 0 || vif.wait_[wait_pin_id] != wait_active) begin
                         if (data_phase_countdown == 0) begin
-                            `uvm_info(get_type_name(), "data phase", UVM_LOW)
+                            `uvm_info(get_type_name(), $sformatf("data phase CS %0d", cs_id), UVM_LOW)
                             payload.push_back(vif.data[7:0]);
                             byte_enable.push_back(vif.be0_n_cle);
 
-                            if (cfg.cs_config[cs_id].device_size == size_16_bit) begin
+                            if (cs_cfg.device_size == size_16_bit) begin
                                 payload.push_back(vif.data[15:8]);
                                 byte_enable.push_back(vif.be1_n);
                             end
@@ -150,7 +165,11 @@ package pkg_gpmc_monitor;
                             data_phase_countdown--;
                         end
                     end
+
+                    @(posedge vif.clk);
                 end // CSn
+
+                `uvm_info(get_type_name(), $sformatf("CS %0d deassert", cs_id), UVM_LOW)
 
                 req.set_data_length(payload.size());
                 req.set_byte_enable_length(byte_enable.size());
@@ -165,7 +184,7 @@ package pkg_gpmc_monitor;
                     req.set_byte_enable(be);
                     req.set_data(pd);
                 end
-                if (cfg.cs_config[cs_id].device_size == size_16_bit)
+                if (cs_cfg.device_size == size_16_bit)
                     req.set_streaming_width(2);
                 else
                     req.set_streaming_width(1);

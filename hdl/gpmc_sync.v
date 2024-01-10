@@ -26,7 +26,7 @@ module gpmc_sync #(
     output                   rd_en,
     output                   wr_en,
     output                   address_valid,
-    output [ADDR_WIDTH:0]  address,
+    output [ADDR_WIDTH:0]    address,
     output [DATA_WIDTH-1:0]  data_out,
     input  [DATA_WIDTH-1:0]  data_in
 );
