@@ -8,7 +8,7 @@ package pkg_led_top_test;
     import pkg_led_top_env::*;
 
     // Sequence
-    import pkg_vector_seq::*;
+    import pkg_cloud_ceiling_test_seq::*;
 
     class led_top_test extends uvm_test;
 
@@ -34,7 +34,7 @@ package pkg_led_top_test;
         endfunction
 
         virtual task run_phase(uvm_phase phase);
-            vector_seq seq = vector_seq::type_id::create("seq");
+            cloud_ceiling_test_seq seq = cloud_ceiling_test_seq::type_id::create("seq");
 
             super.run_phase(phase);
 

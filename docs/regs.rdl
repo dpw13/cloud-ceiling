@@ -1,15 +1,78 @@
-addrmap template {
-    name = "UVM Template Regs"
+addrmap cloud_ceiling_regmap {
+    name = "Cloud Ceiling Regs";
 
+    default accesswidth = 16;
     default regwidth = 16;
     default sw = rw;
     default hw = r;
+    littleendian;
 
     reg {
-        name = "Scratch"
+        name = "ID Register";
 
         field {
-            desc = "Scratch field"
+            desc = "ID value";
+            sw = r;
+            hw = na;
+        } ID[15:0] = 0xC10D;
+    } ID_REG @ 0x0;
+
+    reg {
+        name = "Scratch";
+
+        field {
+            desc = "Scratch field";
         } DATA[15:0] = 0;
-    } SCRATCH @ 0x0;
+    } SCRATCH_REG @ 0x2;
+
+    reg {
+        name = "Reset Status";
+
+        field {
+            desc = "100 MHz Reset";
+            sw = r;
+            hw = w;
+        } RESET_100[0:0] = 0;
+
+        field {
+            desc = "20 MHz Reset";
+            sw = r;
+            hw = w;
+        } RESET_20[1:1] = 0;
+    } RESET_STATUS_REG @ 0x4;
+
+    reg {
+        name = "FIFO Status";
+
+        field {
+            desc = "FIFO Underflow";
+            sw = r;
+            hw = w;
+        } UNDERFLOW[0:0] = 0;
+
+        field {
+            desc = "FIFO Overflow";
+            sw = r;
+            hw = w;
+        } OVERFLOW[4:4] = 0;
+    } FIFO_STATUS_REG @ 0x10;
+
+    reg {
+        name = "FIFO Empty Count";
+
+        field {
+            desc = "Empty Count";
+            sw = r;
+            hw = w;
+        } COUNT[15:0] = 0;
+    } FIFO_EMPTY_REG @ 0x12;
+
+    reg {
+        name = "White Color";
+        regwidth = 32;
+
+        field {
+            desc = "Color Value";
+        } VALUE[23:0] = 0;
+    } WHITE_COLOR_REG @ 0x14;
 };

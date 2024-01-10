@@ -82,11 +82,17 @@ deps/uvm/src/uvm_pkg.sv:
 	$(Q) rm -r ${uvm_src}
 	$(Q) rm ${uvm_tmp}
 
+deps/gen/pkg_cloud_ceiling_regmap.sv: docs/regs.rdl
+	$(Q) mkdir -p deps/gen
+	$(Q) peakrdl uvm $? -o $@
+
 # Note that the order here does matter
-modelsim/sources.list: deps/uvm/src/uvm_pkg.sv
+modelsim/sources.list: deps/uvm/src/uvm_pkg.sv deps/gen/pkg_cloud_ceiling_regmap.sv
 	$(Q) mkdir -p modelsim
 	$(Q) echo ../deps/uvm/src/uvm_pkg.sv > modelsim/sources.list
 	$(Q) echo ../deps/uvm/src/dpi/uvm_dpi.cc >> modelsim/sources.list
+	$(Q) echo ../deps/gen/pkg_cloud_ceiling_regmap.sv >> modelsim/sources.list
+
 	$(Q) cd modelsim && find ../hdl -name '*.v' >> sources.list
 	$(Q) cd modelsim && find ../hdl -name 'pkg_*.sv' >> sources.list
 	$(Q) cd modelsim && find ../hdl -name '*.sv' | grep -v "/pkg_" >> sources.list
