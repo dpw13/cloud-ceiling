@@ -62,7 +62,7 @@ package pkg_gpmc_monitor;
                             cs_id = i;
                             cs_active = 1'b1;
                             cs_cfg = cfg.cs_config[i];
-                            `uvm_info(get_type_name(), $sformatf("Selected CS %0d using config %s", i, cs_cfg.convert2string()), UVM_LOW)
+                            `uvm_info(get_type_name(), $sformatf("CS %0d active using config %s", i, cs_cfg.convert2string()), UVM_DEBUG)
                         end else begin
                             `uvm_error(get_type_name(), $sformatf("CS %0d and %0d asserted simultaneously", cs_id, i))
                         end

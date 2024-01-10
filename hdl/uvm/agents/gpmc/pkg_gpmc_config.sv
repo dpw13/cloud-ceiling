@@ -91,7 +91,7 @@ package pkg_gpmc_config;
         bit [4:0] rd_cycle_time = 0;
 
         // CONFIG6
-        bit [4:0] wr_access_time = 0;
+        bit [4:0] wr_access_time = 0; // used only to gate WAIT signal
         bit [3:0] wr_data_on_ad_mux_bus = 0;
         bit [3:0] cycle_2_cycle_delay = 0;
         bit cycle_2_cycle_same_cs_en = 0;
@@ -99,7 +99,7 @@ package pkg_gpmc_config;
         bit [3:0] bus_turnaround = 0;
 
         // CONFIG7
-        bit [3:0] mask_address = 0;
+        bit [4:0] mask_address = 0;
         bit cs_valid = 0;
         bit [5:0] base_address = 0;
 
@@ -107,8 +107,50 @@ package pkg_gpmc_config;
             super.new(name);
         endfunction //new()
 
+        virtual function int window_size();
+            bit [5:0] size = ~{1'b1, mask_address} + 1;
+            return size;
+        endfunction
+
         virtual function string convert2string();
-            return $sformatf("GPMC CS cfg valid = %0d", cs_valid);
+            if (cs_valid) begin
+                return $sformatf("GPMC CS at %0x:%0x", {base_address, 24'h0}, {base_address + window_size(), 24'h0});
+            end else begin
+                return "GPMC CS disabled";
+            end
+        endfunction
+
+        virtual function void set_range(bit [63:0] base, bit [63:0] size);
+            assert (base[63:30] == 0) else
+                $fatal("GPMC window base too high");
+            assert (base[23:0] == 0) else
+                $fatal("GPMC window base must be aligned to 16 MB");
+            
+            assert (size[63:29] == 0) else
+                $fatal("GPMC window must be less than 256 MB");
+            assert (size[23:0] == 0) else
+                $fatal("GPMC window size must be aligned to 16 MB");
+            assert ($countones(size) == 1) else
+                $fatal("GPMC window size must be power of 2");
+
+            base_address = base[29:24];
+            mask_address = ~(size[28:24] - 1);
+            cs_valid = 1'b1;
+        endfunction
+
+        virtual function bit in_range(bit [63:0] addr);
+            // Build the address mask. The address will be ANDed with this mask and compared
+            // to the base offset.
+            bit [63:0] addr_mask = {35'h7FFFFFFFF, mask_address, 24'h000000};
+            // Calculate the base offset as a byte-aligned address
+            bit [63:0] base_addr = {34'h0, base_address, 24'h000000};
+
+            if (cs_valid) begin
+                `uvm_info(get_type_name(), $sformatf("in_range(%0x) mask = %0x base = %0x", addr, addr_mask, base_addr), UVM_DEBUG)
+                return (cs_valid && (addr & addr_mask) == base_addr);
+            end else begin
+                return 1'b0;
+            end
         endfunction
     endclass
 
