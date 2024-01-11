@@ -14,13 +14,21 @@ package pkg_cloud_ceiling_test_seq;
         virtual task body();
             cloud_ceiling_regmap regmodel;
             uvm_status_e status;
-            int rdata;
+            int rdata, tmp;
 
             if (!uvm_config_db#(cloud_ceiling_regmap)::get(null, "uvm_test_top", "m_regmodel", regmodel))
                 `uvm_fatal(get_type_name(), "Could not get register model")
 
             regmodel.ID_REG.read(status, rdata);
+            assert (status == UVM_IS_OK);
             assert (rdata == 32'hC10D);
+
+            tmp = $urandom() & 16'hFFFF;
+            regmodel.SCRATCH_REG.write(status, tmp);
+            assert (status == UVM_IS_OK);
+            regmodel.SCRATCH_REG.read(status, rdata);
+            assert (status == UVM_IS_OK);
+            assert (tmp == rdata);
         endtask
     endclass //cloud_ceiling_test_seq extends uvm_sequence
     

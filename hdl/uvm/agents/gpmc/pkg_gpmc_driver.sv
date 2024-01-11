@@ -120,7 +120,8 @@ package pkg_gpmc_driver;
                         end
                         ad_mux: begin
                             `uvm_info(get_type_name(), $sformatf("Driving AD with %0x", addr[0 +: DATA_WIDTH]), UVM_LOW)
-                            vif.driver_cb.data <= addr[0 +: DATA_WIDTH];
+                            // Assume 16-bit mode and start with addr[1]
+                            vif.driver_cb.data <= addr[1 +: DATA_WIDTH];
                         end
                         aad_mux:
                             `uvm_info(get_type_name(), "AAD mode not fully supported", UVM_LOW)
@@ -191,8 +192,10 @@ package pkg_gpmc_driver;
 
                     if (cycle == cs_cfg.we_on_time)
                         vif.we_n <= 1'b0;
-                    if (cycle == cs_cfg.we_off_time)
+                    if (cycle == cs_cfg.we_off_time) begin
                         vif.we_n <= 1'b1;
+                        vif.driver_cb.data <= 'z;
+                    end
                     if (cycle == cs_cfg.wr_data_on_ad_mux_bus)
                         vif.driver_cb.data <= {req.m_data[0], req.m_data[1]};
 
