@@ -26,7 +26,10 @@ package pkg_gpmc_driver;
 
         virtual function void connect_phase(uvm_phase phase);
             vif = cfg.vif;
+            // Set initial values. Use async assignment instead of using the clocking block
             vif.cs_n <= '1;
+            // For whatever reason cs_n also needs the CB assignment or you get Xs on all CS lines.
+            vif.driver_cb.cs_n <= '1;
             vif.clk <= 1'b0;
             vif.adv_n_ale <= 1'b1;
             vif.oe_n_re_n <= 1'b1;
@@ -87,30 +90,30 @@ package pkg_gpmc_driver;
 
             while (1) begin
                 if (cycle == cs_cfg.cs_on_time)
-                    vif.cs_n[cs_id] <= 1'b0;
+                    vif.driver_cb.cs_n[cs_id] <= 1'b0;
 
                 if (cs_cfg.mux_addr_data == aad_mux) begin
                     if (cycle == cs_cfg.adv_aad_mux_on_time) begin
                         bit [63:0] addr = req.get_address();
-                        vif.adv_n_ale <= 1'b0;
+                        vif.driver_cb.adv_n_ale <= 1'b0;
                         vif.driver_cb.data <= addr[DATA_WIDTH+1 +: DATA_WIDTH];
                     end
 
                     if (cycle == cs_cfg.oe_aad_mux_on_time) begin
                         bit [63:0] addr = req.get_address();
-                        vif.oe_n_re_n <= 1'b0;
+                        vif.driver_cb.oe_n_re_n <= 1'b0;
                         vif.driver_cb.data <= addr[DATA_WIDTH+1 +: DATA_WIDTH];
                     end
 
                     if (cycle == cs_cfg.oe_aad_mux_off_time) begin
-                        vif.oe_n_re_n <= 1'b1;
+                        vif.driver_cb.oe_n_re_n <= 1'b1;
                         vif.driver_cb.data <= 'z;
                     end
                 end
 
                 if (cycle == cs_cfg.adv_on_time) begin
                     bit [63:0] addr = req.get_address();
-                    vif.adv_n_ale <= 1'b0;
+                    vif.driver_cb.adv_n_ale <= 1'b0;
                     case (cs_cfg.mux_addr_data)
                         no_mux: begin
                             vif.addr <= addr[ADDR_WIDTH-1:0];
@@ -126,16 +129,16 @@ package pkg_gpmc_driver;
 
                 if (req.is_read()) begin
                     if (cycle == cs_cfg.cs_rd_off_time)
-                        vif.cs_n[cs_id] <= 1'b1;
+                        vif.driver_cb.cs_n[cs_id] <= 1'b1;
 
                     if (cycle == cs_cfg.adv_aad_mux_rd_off_time && cs_cfg.mux_addr_data == aad_mux) begin
-                        vif.adv_n_ale <= 1'b1;
-                        vif.oe_n_re_n <= 1'b1;
+                        vif.driver_cb.adv_n_ale <= 1'b1;
+                        vif.driver_cb.oe_n_re_n <= 1'b1;
                         vif.driver_cb.data <= 'z;
                     end
 
                     if (cycle == cs_cfg.adv_rd_off_time) begin
-                        vif.adv_n_ale <= 1'b1;
+                        vif.driver_cb.adv_n_ale <= 1'b1;
                         // Tristate data if address muxed onto data
                         if (cs_cfg.mux_addr_data != no_mux) begin
                             vif.driver_cb.data <= 'z;
@@ -143,9 +146,9 @@ package pkg_gpmc_driver;
                     end
 
                     if (cycle == cs_cfg.oe_on_time)
-                        vif.oe_n_re_n <= 1'b0;
+                        vif.driver_cb.oe_n_re_n <= 1'b0;
                     if (cycle == cs_cfg.oe_off_time) begin
-                        vif.oe_n_re_n <= 1'b1;
+                        vif.driver_cb.oe_n_re_n <= 1'b1;
                         vif.driver_cb.data <= 'z;
                     end
 
@@ -177,30 +180,30 @@ package pkg_gpmc_driver;
                         burst_beat = burst_count-1;
 
                     if (cycle == burst_cs_off)
-                        vif.cs_n[cs_id] <= 1'b1;
+                        vif.driver_cb.cs_n[cs_id] <= 1'b1;
 
                     if (cs_cfg.mux_addr_data == aad_mux) begin
                         if (cycle == cs_cfg.adv_aad_mux_wr_off_time) begin
                             // The spec is unclear on when the data lines tristate in AAD
                             // mode, so we tristate it at the first off time.
-                            vif.adv_n_ale <= 1'b1;
+                            vif.driver_cb.adv_n_ale <= 1'b1;
                             vif.driver_cb.data <= 'z;
                         end
                     end
 
                     if (cycle == cs_cfg.adv_wr_off_time) begin
-                        vif.adv_n_ale <= 1'b1;
+                        vif.driver_cb.adv_n_ale <= 1'b1;
                         // Tristate data if address muxed onto data
                         if (cs_cfg.mux_addr_data != no_mux)
                             vif.driver_cb.data <= 'z;
                     end
 
                     if (cycle == cs_cfg.we_on_time)
-                        vif.we_n <= 1'b0;
+                        vif.driver_cb.we_n <= 1'b0;
                     if (cycle >= cs_cfg.wr_data_on_ad_mux_bus)
                         vif.driver_cb.data <= {req.m_data[2*burst_beat], req.m_data[2*burst_beat + 1]};
                     if (cycle >= burst_we_off) begin
-                        vif.we_n <= 1'b1;
+                        vif.driver_cb.we_n <= 1'b1;
                         vif.driver_cb.data <= 'z;
                     end
 
@@ -232,7 +235,7 @@ package pkg_gpmc_driver;
             repeat (cs_cfg.cycle_2_cycle_delay) @(posedge vif.fclk);
 
             req.set_response_status(UVM_TLM_OK_RESPONSE);
-            vif.cs_n <= '1;
+            vif.driver_cb.cs_n <= '1;
         endtask
     endclass
 

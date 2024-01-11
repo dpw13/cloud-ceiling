@@ -67,7 +67,7 @@ module tb_led_top;
         cfg.cs_config[1].rd_cycle_time = 24;
         cfg.cs_config[1].wr_cycle_time = 12;
 
-        cfg.cs_config[1].wr_access_time = 8;
+        cfg.cs_config[1].wr_access_time = 6; // see notes on gpmc_if clocking
         cfg.cs_config[1].wr_data_on_ad_mux_bus = 4;
         cfg.cs_config[1].cycle_2_cycle_delay = 0;
         cfg.cs_config[1].cycle_2_cycle_same_cs_en = 1;

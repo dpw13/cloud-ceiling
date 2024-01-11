@@ -17,7 +17,8 @@ interface gpmc_if #(
     logic wait_[3:0];
     logic dir;
 
-    clocking driver_cb @(posedge clk);
+    clocking driver_cb @(negedge clk);
+        output addr, cs_n, adv_n_ale, oe_n_re_n, we_n, be0_n_cle, be1_n, wp_n;
         inout data;
     endclocking;
 
