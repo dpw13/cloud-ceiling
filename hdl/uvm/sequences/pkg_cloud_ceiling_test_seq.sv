@@ -45,7 +45,9 @@ package pkg_cloud_ceiling_test_seq;
             regmodel.FIFO_MEM.m_mem.burst_write(status, 0, burst_data);
             assert (status == UVM_IS_OK);
 
-            #400ns;
+            regmodel.REGS.FIFO_EMPTY_REG.read(status, rdata);
+
+            #100ns;
         endtask
     endclass //cloud_ceiling_test_seq extends uvm_sequence
     
