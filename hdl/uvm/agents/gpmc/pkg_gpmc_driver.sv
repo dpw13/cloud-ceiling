@@ -81,7 +81,8 @@ package pkg_gpmc_driver;
             cs_cfg = cfg.cs_config[cs_id];
 
             // Align to rising edge of FCLK
-            @(posedge vif.fclk);
+            if (~vif.fclk)
+                @(posedge vif.fclk);
             `uvm_info(get_type_name(), $sformatf("Register request %s using %s", req.convert2string(), cs_cfg.convert2string()), UVM_LOW)
 
             while (1) begin
@@ -92,19 +93,16 @@ package pkg_gpmc_driver;
                     if (cycle == cs_cfg.adv_aad_mux_on_time) begin
                         bit [63:0] addr = req.get_address();
                         vif.adv_n_ale <= 1'b0;
-                        `uvm_info(get_type_name(), "Driving AD", UVM_LOW)
-                        vif.driver_cb.data <= addr[DATA_WIDTH +: DATA_WIDTH];
+                        vif.driver_cb.data <= addr[DATA_WIDTH+1 +: DATA_WIDTH];
                     end
 
                     if (cycle == cs_cfg.oe_aad_mux_on_time) begin
                         bit [63:0] addr = req.get_address();
                         vif.oe_n_re_n <= 1'b0;
-                        `uvm_info(get_type_name(), "Driving AD", UVM_LOW)
-                        vif.driver_cb.data <= addr[DATA_WIDTH +: DATA_WIDTH];
+                        vif.driver_cb.data <= addr[DATA_WIDTH+1 +: DATA_WIDTH];
                     end
 
                     if (cycle == cs_cfg.oe_aad_mux_off_time) begin
-                        `uvm_info(get_type_name(), "Tristating data", UVM_LOW)
                         vif.oe_n_re_n <= 1'b1;
                         vif.driver_cb.data <= 'z;
                     end
@@ -115,16 +113,14 @@ package pkg_gpmc_driver;
                     vif.adv_n_ale <= 1'b0;
                     case (cs_cfg.mux_addr_data)
                         no_mux: begin
-                            `uvm_info(get_type_name(), "Driving addr", UVM_LOW)
                             vif.addr <= addr[ADDR_WIDTH-1:0];
                         end
                         ad_mux: begin
-                            `uvm_info(get_type_name(), $sformatf("Driving AD with %0x", addr[0 +: DATA_WIDTH]), UVM_LOW)
                             // Assume 16-bit mode and start with addr[1]
                             vif.driver_cb.data <= addr[1 +: DATA_WIDTH];
                         end
                         aad_mux:
-                            `uvm_info(get_type_name(), "AAD mode not fully supported", UVM_LOW)
+                            `uvm_warning(get_type_name(), "AAD mode not fully supported")
                     endcase
                 end
 
@@ -135,7 +131,6 @@ package pkg_gpmc_driver;
                     if (cycle == cs_cfg.adv_aad_mux_rd_off_time && cs_cfg.mux_addr_data == aad_mux) begin
                         vif.adv_n_ale <= 1'b1;
                         vif.oe_n_re_n <= 1'b1;
-                        `uvm_info(get_type_name(), "Tristating data", UVM_LOW)
                         vif.driver_cb.data <= 'z;
                     end
 
@@ -143,7 +138,6 @@ package pkg_gpmc_driver;
                         vif.adv_n_ale <= 1'b1;
                         // Tristate data if address muxed onto data
                         if (cs_cfg.mux_addr_data != no_mux) begin
-                            `uvm_info(get_type_name(), "Tristating data", UVM_LOW)
                             vif.driver_cb.data <= 'z;
                         end
                     end
@@ -152,7 +146,6 @@ package pkg_gpmc_driver;
                         vif.oe_n_re_n <= 1'b0;
                     if (cycle == cs_cfg.oe_off_time) begin
                         vif.oe_n_re_n <= 1'b1;
-                        `uvm_info(get_type_name(), "Tristating data", UVM_LOW)
                         vif.driver_cb.data <= 'z;
                     end
 
@@ -171,7 +164,19 @@ package pkg_gpmc_driver;
                 end
 
                 if (req.is_write()) begin
-                    if (cycle == cs_cfg.cs_wr_off_time)
+                    int burst_count = req.get_data_length() / 2;
+                    // wr_cycle_time already includes a single data beat
+                    int burst_cycle_time = cs_cfg.wr_cycle_time + (burst_count - 1) * cs_cfg.page_burst_access_time;
+                    int burst_cs_off = cs_cfg.cs_wr_off_time + (burst_count - 1) * cs_cfg.page_burst_access_time;
+                    int burst_we_off = cs_cfg.we_off_time + (burst_count - 1) * cs_cfg.page_burst_access_time;
+                    int burst_beat = (cycle - cs_cfg.wr_access_time) / cs_cfg.page_burst_access_time;
+
+                    if (burst_beat < 0)
+                        burst_beat = 0;
+                    if (burst_beat > burst_count-1)
+                        burst_beat = burst_count-1;
+
+                    if (cycle == burst_cs_off)
                         vif.cs_n[cs_id] <= 1'b1;
 
                     if (cs_cfg.mux_addr_data == aad_mux) begin
@@ -192,16 +197,16 @@ package pkg_gpmc_driver;
 
                     if (cycle == cs_cfg.we_on_time)
                         vif.we_n <= 1'b0;
-                    if (cycle == cs_cfg.we_off_time) begin
+                    if (cycle >= cs_cfg.wr_data_on_ad_mux_bus)
+                        vif.driver_cb.data <= {req.m_data[2*burst_beat], req.m_data[2*burst_beat + 1]};
+                    if (cycle >= burst_we_off) begin
                         vif.we_n <= 1'b1;
                         vif.driver_cb.data <= 'z;
                     end
-                    if (cycle == cs_cfg.wr_data_on_ad_mux_bus)
-                        vif.driver_cb.data <= {req.m_data[0], req.m_data[1]};
 
                     // TODO: See SPRUH73Q Fig 7-22 and 7-23 for burst write timing diagrams
 
-                    if (cycle == cs_cfg.wr_cycle_time)
+                    if (cycle == burst_cycle_time)
                         break;
                 end
 

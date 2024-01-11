@@ -1,78 +1,104 @@
 addrmap cloud_ceiling_regmap {
     name = "Cloud Ceiling Regs";
 
-    default accesswidth = 16;
+    /*
+     * Burst support on memories.
+     *
+     * The default UVM implementation of uvm_reg_map splits all transactions into
+     * multiples of the bus width. It has to do this because it translates accesses
+     * through uvm_reg_bus_op, which uses uvm_reg_data_t, which has no concept of
+     * burst transfers. To avoid this, we would either need to provide extension
+     * data to the accesses or implement a different frontdoor implementation.
+     *
+     * Rather than doing either of the above, we treat the bus as being wider than
+     * it really is, up to the maximum UVM_REG_DATA_WIDTH. This allows uvm_reg_bus_op
+     * to represent bursts, and the driver receives wide uvm_tlm_gps, implementing
+     * the actual burst.
+     */
+    default accesswidth = 256;
     default regwidth = 16;
     default sw = rw;
     default hw = r;
     littleendian;
 
-    reg {
-        name = "ID Register";
+    regfile {
+        /* Force all register accesses to be 16-bits. */
+        default accesswidth = 16;
+        reg {
+            name = "ID Register";
 
-        field {
-            desc = "ID value";
-            sw = r;
-            hw = na;
-        } ID[15:0] = 0xC10D;
-    } ID_REG @ 0x0;
+            field {
+                desc = "ID value";
+                sw = r;
+                hw = na;
+            } ID[15:0] = 0xC10D;
+        } ID_REG @ 0x0;
 
-    reg {
-        name = "Scratch";
+        reg {
+            name = "Scratch";
 
-        field {
-            desc = "Scratch field";
-        } DATA[15:0] = 0;
-    } SCRATCH_REG @ 0x2;
+            field {
+                desc = "Scratch field";
+            } DATA[15:0] = 0;
+        } SCRATCH_REG @ 0x2;
 
-    reg {
-        name = "Reset Status";
+        reg {
+            name = "Reset Status";
 
-        field {
-            desc = "100 MHz Reset";
-            sw = r;
-            hw = w;
-        } RESET_100[0:0] = 0;
+            field {
+                desc = "100 MHz Reset";
+                sw = r;
+                hw = w;
+            } RESET_100[0:0] = 0;
 
-        field {
-            desc = "20 MHz Reset";
-            sw = r;
-            hw = w;
-        } RESET_20[1:1] = 0;
-    } RESET_STATUS_REG @ 0x4;
+            field {
+                desc = "20 MHz Reset";
+                sw = r;
+                hw = w;
+            } RESET_20[1:1] = 0;
+        } RESET_STATUS_REG @ 0x4;
 
-    reg {
-        name = "FIFO Status";
+        reg {
+            name = "FIFO Status";
 
-        field {
-            desc = "FIFO Underflow";
-            sw = r;
-            hw = w;
-        } UNDERFLOW[0:0] = 0;
+            field {
+                desc = "FIFO Underflow";
+                sw = r;
+                hw = w;
+            } UNDERFLOW[0:0] = 0;
 
-        field {
-            desc = "FIFO Overflow";
-            sw = r;
-            hw = w;
-        } OVERFLOW[4:4] = 0;
-    } FIFO_STATUS_REG @ 0x10;
+            field {
+                desc = "FIFO Overflow";
+                sw = r;
+                hw = w;
+            } OVERFLOW[4:4] = 0;
+        } FIFO_STATUS_REG @ 0x10;
 
-    reg {
-        name = "FIFO Empty Count";
+        reg {
+            name = "FIFO Empty Count";
 
-        field {
-            desc = "Empty Count";
-            sw = r;
-            hw = w;
-        } COUNT[15:0] = 0;
-    } FIFO_EMPTY_REG @ 0x12;
+            field {
+                desc = "Empty Count";
+                sw = r;
+                hw = w;
+            } COUNT[15:0] = 0;
+        } FIFO_EMPTY_REG @ 0x12;
 
-    reg {
-        name = "White Color";
-        regwidth = 32;
+        reg {
+            name = "White Color";
+            regwidth = 32;
 
-        field {
-            desc = "Color Value";
-        } VALUE[23:0] = 0;
-    } WHITE_COLOR_REG @ 0x14;
+            field {
+                desc = "Color Value";
+            } VALUE[23:0] = 0;
+        } WHITE_COLOR_REG @ 0x14;
+    } REGS @ 0x0;
+
+    mem {
+        name = "Color FIFO Memory";
+        sw = w;
+
+        memwidth = 256;
+        mementries = 1024;
+    } external FIFO_MEM @ 0x1000;
 };

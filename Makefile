@@ -35,6 +35,7 @@ UVM_VERSION=1800.2-2020-2.0
 UVM_FILE_VER=$(shell echo ${UVM_VERSION} | sed -e 's/\.//g')
 
 CCFLAGS=-DQUESTA -Wno-missing-declarations
+VLOGFLAGS=+define+UVM_REG_DATA_WIDTH=256
 
 Q = @
 
@@ -98,7 +99,7 @@ modelsim/sources.list: deps/uvm/src/uvm_pkg.sv deps/gen/pkg_cloud_ceiling_regmap
 	$(Q) cd modelsim && find ../hdl -name '*.sv' | grep -v "/pkg_" >> sources.list
 
 compile: modelsim/sources.list modelsim/modelsim.mpf
-	$(Q) cd modelsim && vlog -modelsimini modelsim.mpf +incdir+../deps/uvm/src -ccflags "${CCFLAGS}" -sv17compat -F sources.list
+	$(Q) cd modelsim && vlog -modelsimini modelsim.mpf +incdir+../deps/uvm/src ${VLOGFLAGS} -ccflags "${CCFLAGS}" -sv17compat -F sources.list
 	$(Q) cd modelsim && vcom -modelsimini modelsim.mpf $(addprefix "../",${VHDL_SRC})
 
 vsim: compile

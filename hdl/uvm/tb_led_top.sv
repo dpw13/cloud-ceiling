@@ -69,7 +69,7 @@ module tb_led_top;
 
         cfg.cs_config[1].wr_access_time = 8;
         cfg.cs_config[1].wr_data_on_ad_mux_bus = 4;
-        cfg.cs_config[1].cycle_2_cycle_delay = 4;
+        cfg.cs_config[1].cycle_2_cycle_delay = 0;
         cfg.cs_config[1].cycle_2_cycle_same_cs_en = 1;
         cfg.cs_config[1].cycle_2_cycle_diff_cs_en = 1;
 
