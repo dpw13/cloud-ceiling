@@ -82,7 +82,7 @@ addrmap cloud_ceiling_regmap {
             field {
                 desc = "Color Value";
                 swmod;
-            } VALUE[23:0] = 0;
+            } VALUE[23:0] = 0x400818;
         } WHITE_COLOR_REG @ 0x14;
     } REGS @ 0x0;
 
