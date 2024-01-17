@@ -129,6 +129,25 @@ module top(
 	assign hwif_in.REGS.FIFO_STATUS_REG.OVERFLOW.hwset = fifo_underflow;
 	assign hwif_in.REGS.FIFO_EMPTY_REG.COUNT.next = fifo_empty_count;
 
+	assign hwif_in.FIFO_MEM.rd_data = '0;
+
+	generate begin: gen_acks
+		logic rd_ack, wr_ack;
+
+		always_ff @(posedge clk_100) begin
+			if(reset_100) begin
+				rd_ack <= 1'b0;
+				wr_ack <= 1'b0;
+			end else begin
+				rd_ack <= hwif_out.FIFO_MEM.req && !hwif_out.FIFO_MEM.req_is_wr;
+				wr_ack <= hwif_out.FIFO_MEM.req &&  hwif_out.FIFO_MEM.req_is_wr;
+			end
+		end
+
+		assign hwif_in.FIFO_MEM.rd_ack = rd_ack;
+		assign hwif_in.FIFO_MEM.wr_ack = wr_ack;
+	end endgenerate
+
 	logic color_valid;
 	logic [23:0] color_in; // Cold Red Warm
 
@@ -140,18 +159,6 @@ module top(
 	// Anything in the second page will write to the FIFO
 	assign color_fifo_write = (hwif_out.FIFO_MEM.req && hwif_out.FIFO_MEM.req_is_wr);
 	assign color_fifo_write_data = hwif_out.FIFO_MEM.wr_data;
-
-	assign hwif_in.FIFO_MEM.rd_data = '0;
-
-	always_ff @(posedge clk_100) begin
-		if(reset_100) begin
-			hwif_in.FIFO_MEM.rd_ack <= 1'b0;
-			hwif_in.FIFO_MEM.wr_ack <= 1'b0;
-		end else begin
-			hwif_in.FIFO_MEM.rd_ack <= hwif_out.FIFO_MEM.req && !hwif_out.FIFO_MEM.req_is_wr;
-			hwif_in.FIFO_MEM.wr_ack <= hwif_out.FIFO_MEM.req &&  hwif_out.FIFO_MEM.req_is_wr;
-		end
-	end
 
 	logic fifo_toggle = 1'b0;
 	always @(posedge gpmc_clk)

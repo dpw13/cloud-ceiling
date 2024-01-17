@@ -19,6 +19,7 @@ interface cpu_if #(
     wire wr_err;
 
     modport cpu (
+        input reset, clk,
         output req,
         output req_is_wr,
         output addr,
@@ -34,6 +35,7 @@ interface cpu_if #(
     );
 
     modport dev (
+        input reset, clk,
         input req,
         input req_is_wr,
         input addr,

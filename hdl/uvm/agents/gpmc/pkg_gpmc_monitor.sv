@@ -98,11 +98,11 @@ package pkg_gpmc_monitor;
                             addr[bit_offset +: ADDR_WIDTH] = vif.addr[0 +: ADDR_WIDTH];
                         end else begin
                             // If muxed, load address from data and address lines.
-                            addr[bit_offset +: DATA_WIDTH] = vif.data[0 +: DATA_WIDTH];
+                            addr[bit_offset +: DATA_WIDTH] = vif.data_o[0 +: DATA_WIDTH];
                             addr[bit_offset + DATA_WIDTH +: ADDR_WIDTH] = vif.addr[0 +: ADDR_WIDTH];
                         end
 
-                        `uvm_info(get_type_name(), $sformatf("CS %0d ADV_n ADDR %0x AD %0x", cs_id, addr, vif.data), UVM_LOW)
+                        `uvm_info(get_type_name(), $sformatf("CS %0d ADV_n ADDR %0x", cs_id, addr), UVM_LOW)
                     end else if (~vif.oe_n_re_n) begin
                         // if OEn asserts without ADVn, that indicates a read
                         // The GPMC read timing is specified relative to the start of CS. Compute
@@ -153,12 +153,12 @@ package pkg_gpmc_monitor;
                     // wait monitoring
                     if (wait_pin_id < 0 || vif.wait_[wait_pin_id] != wait_active) begin
                         if (data_phase_countdown == 0) begin
-                            `uvm_info(get_type_name(), $sformatf("data beat CS %0d AD %0x", cs_id, vif.data), UVM_LOW)
-                            payload.push_back(vif.data[7:0]);
+                            `uvm_info(get_type_name(), $sformatf("data beat CS %0d AD %0x", cs_id, vif.data_i), UVM_LOW)
+                            payload.push_back(vif.data_i[7:0]);
                             byte_enable.push_back(vif.be0_n_cle);
 
                             if (cs_cfg.device_size == size_16_bit) begin
-                                payload.push_back(vif.data[15:8]);
+                                payload.push_back(vif.data_i[15:8]);
                                 byte_enable.push_back(vif.be1_n);
                             end
                         end else if (data_phase_countdown > 0) begin
@@ -166,7 +166,7 @@ package pkg_gpmc_monitor;
                         end
                     end
 
-                    @(posedge vif.clk);
+                    @(posedge vif.clk, posedge vif.cs_n[cs_id]);
                 end // CSn
 
                 `uvm_info(get_type_name(), $sformatf("CS %0d deassert", cs_id), UVM_LOW)

@@ -6,7 +6,8 @@ interface gpmc_if #(
     bit fclk;
     bit clk;
     logic [ADDR_WIDTH-1:0] addr;
-    wire [DATA_WIDTH-1:0] data;
+    logic [DATA_WIDTH-1:0] data_i;
+    logic [DATA_WIDTH-1:0] data_o;
     logic [CS_COUNT-1:0] cs_n;
     logic adv_n_ale;
     logic oe_n_re_n;
@@ -17,18 +18,13 @@ interface gpmc_if #(
     logic wait_[3:0];
     logic dir;
 
-    clocking driver_cb @(negedge clk);
-        output addr, cs_n, adv_n_ale, oe_n_re_n, we_n, be0_n_cle, be1_n, wp_n;
-        inout data;
-    endclocking;
-
     modport controller (
-        output clk, addr, cs_n, adv_n_ale, oe_n_re_n, we_n, be0_n_cle, be1_n, wp_n, dir,
-        input wait_, fclk
+        output clk, addr, cs_n, adv_n_ale, oe_n_re_n, we_n, be0_n_cle, be1_n, wp_n, dir, data_o,
+        input data_i, fclk
     );
 
     modport device (
-        input clk, addr, cs_n, adv_n_ale, oe_n_re_n, we_n, be0_n_cle, be1_n, wp_n, dir,
-        output wait_
+        input clk, addr, cs_n, adv_n_ale, oe_n_re_n, we_n, be0_n_cle, be1_n, wp_n, dir, data_o,
+        output data_i, wait_
     );
 endinterface
