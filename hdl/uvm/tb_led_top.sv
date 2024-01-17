@@ -55,8 +55,8 @@ module tb_led_top;
         // Timing. The CLK is FCLK/4, so all these timings must be
         // multiplied by 4 to be in units of CLK.
         cfg.cs_config[1].cs_on_time = 0;
-        cfg.cs_config[1].cs_wr_off_time = 8;
         cfg.cs_config[1].cs_rd_off_time = 12;
+        cfg.cs_config[1].cs_wr_off_time = 8;
 
         cfg.cs_config[1].adv_on_time = 0;
         cfg.cs_config[1].adv_wr_off_time = 4;
