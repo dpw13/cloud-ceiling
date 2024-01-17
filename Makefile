@@ -60,7 +60,7 @@ ${BUILD}/${PROJ}.synth.json : ${SV_SRC} ${VER_SRC} ${VHDL_SRC} ${GEN_SRC} ${PROJ
 
 ${BUILD}/${PROJ}.asc : ${BUILD}/${PROJ}.synth.json ${PIN_SRC} ${PREPACK_PY}
 	$(Q) echo -n "Place & Route ... "
-	$(Q) nextpnr-ice40 -q --top ${TOP_ENT} --$(DEVICE) --package $(FOOTPRNT) --pre-pack ${PREPACK_PY} --pcf $(PIN_SRC) --asc $(BUILD)/$(PROJ).asc --json $(BUILD)/$(PROJ).synth.json --report ${BUILD}/${PROJ}.rpt.json
+	$(Q) nextpnr-ice40 --top ${TOP_ENT} --$(DEVICE) --package $(FOOTPRNT) --pre-pack ${PREPACK_PY} --pcf $(PIN_SRC) --asc $(BUILD)/$(PROJ).asc --json $(BUILD)/$(PROJ).synth.json --report ${BUILD}/${PROJ}.rpt.json
 	$(Q) echo " Done"
 	$(Q) # nextpnr does timing analysis internally, report results
 	$(Q) echo

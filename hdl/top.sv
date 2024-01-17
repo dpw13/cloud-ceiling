@@ -3,22 +3,22 @@
  */
 
 module top(
-	input clk_100,
-	input glbl_reset,
+	input wire clk_100,
+	input wire glbl_reset,
 
-	output [3:0] led,
+	output wire [3:0] led,
 
 	// GPMC INTERFACE
-	inout  [15:0] gpmc_ad,
-	input         gpmc_advn,
-	input         gpmc_csn1,
-	input         gpmc_wein,
-	input         gpmc_oen,
-	input         gpmc_clk,
+	inout wire [15:0] gpmc_ad,
+	input wire        gpmc_advn,
+	input wire        gpmc_csn1,
+	input wire        gpmc_wein,
+	input wire        gpmc_oen,
+	input wire        gpmc_clk,
 
 	// LED string interface
-	output [22:0]  color_led_sdi,
-	output [3:0]  white_led_sdi
+	output wire [22:0]  color_led_sdi,
+	output wire [3:0]  white_led_sdi
 );
 
 	import cloud_ceiling_regmap_pkg::*;
@@ -69,15 +69,6 @@ module top(
 		reset_20 <= reset_ms_20;
 	end
 
-	logic gpmc_reset_ms = 1'b1;
-	logic gpmc_reset = 1'b1;
-	always @(posedge gpmc_clk)
-	begin
-		// Double-sync reset onto gpmc_clk
-		gpmc_reset_ms <= glbl_reset;
-		gpmc_reset <= gpmc_reset_ms;
-	end
-
 	wire gpmc_address_valid;
 	wire gpmc_rd_en;
 	wire gpmc_wr_en;
@@ -91,7 +82,7 @@ module top(
 	cpu_if#(
 		.ADDR_WIDTH(GPMC_ADDR_WIDTH),
 		.DATA_WIDTH(GPMC_DATA_WIDTH)
-	) cpuif(reset_100, clk_100);
+	) cpuif(.reset(reset_100), .clk(clk_100));
 
 	gpmc_sync # (
 		.ADDR_WIDTH(GPMC_ADDR_WIDTH),
@@ -161,7 +152,7 @@ module top(
 	assign color_fifo_write_data = hwif_out.FIFO_MEM.wr_data;
 
 	logic fifo_toggle = 1'b0;
-	always @(posedge gpmc_clk)
+	always @(posedge clk_100)
 	begin
 		if (color_fifo_write)
 			fifo_toggle <= ~fifo_toggle;
@@ -202,14 +193,14 @@ module top(
 		.IClk(clk_20),
 		.iReady(),
 		.iEvent(pxl_fifo_underflow),
-		.OClk(gpmc_clk),
+		.OClk(clk_100),
 		.oEvent(fifo_underflow)
 	);
 
 	// Bring color_valid bit to clk_20
 	wire color_valid_20;
 	EventXing color_valid_xing (
-		.IClk(gpmc_clk),
+		.IClk(clk_100),
 		.iReady(),
 		.iEvent(color_valid),
 		.OClk(clk_20),

@@ -11,10 +11,10 @@
  */
 
 module pll(
-	input  reset_n,
-	input  clock_in,
-	output clock_out,
-	output locked
+	input  wire reset_n,
+	input  wire clock_in,
+	output wire clock_out,
+	output wire locked
 	);
 
 SB_PLL40_CORE #(
