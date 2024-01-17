@@ -280,11 +280,11 @@ module parallel_strings #(
     wire [23:0] pxl_data;
     assign pxl_data = init_active ? INIT_COLOR : shift_data;
 
-    genvar string;
+    genvar s;
     generate
-        for (string = 0; string < N_STRINGS; string = string + 1) begin
+        for (s = 0; s < N_STRINGS; s = s + 1) begin
             wire pxl_data_valid;
-            assign pxl_data_valid = init_active ? init_data_valid : shift_data_valid[string];
+            assign pxl_data_valid = init_active ? init_data_valid : shift_data_valid[s];
 
             string_driver #(
                 .CLK_PERIOD_NS(50),
@@ -294,8 +294,8 @@ module parallel_strings #(
                 .pixel_data(pxl_data),
                 .pixel_data_valid(pxl_data_valid),
                 .h_blank(h_blank_q),
-                .sdi(led_sdi[string]),
-                .string_ready(string_ready[string])
+                .sdi(led_sdi[s]),
+                .string_ready(string_ready[s])
             );
         end
     endgenerate

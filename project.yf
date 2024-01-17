@@ -1,25 +1,28 @@
-ghdl --no-formal \
-    hdl/VHDL/Packages/PkgUtils.vhd \
-    hdl/VHDL/ClockXing/EventXing.vhd \
-    hdl/VHDL/ClockXing/VectorXing.vhd \
-    hdl/VHDL/Fifo/FifoCounterHalf.vhd \
-    hdl/VHDL/Fifo/DpRam.vhd \
-    hdl/VHDL/Fifo/DpParityRam.vhd \
-    hdl/VHDL/Fifo/SimpleFifo.vhd -e SimpleFifo
+plugin -i ghdl
 
-ghdl --no-formal \
-    hdl/VHDL/Packages/PkgUtils.vhd \
-    hdl/VHDL/ClockXing/EventXing.vhd -e EventXing
+# Import previously-elaborated VHDL
+# Lower-level files must be imported first
+ghdl EventXing
+ghdl SimpleFifo
 
 # For simulation
-write_verilog out/SimpleFifo.v
+#write_verilog out/SimpleFifo.v
 
-read_verilog hdl/pll.v
-read_verilog hdl/gpmc_sync.v
-read_verilog hdl/string_driver.v
-read_verilog hdl/extra_strings.v
-read_verilog hdl/parallel_strings.v
-read_verilog hdl/top.v
+plugin -i systemverilog
+read_systemverilog \
+    deps/gen/cloud_ceiling_regmap_pkg.sv \
+    deps/gen/cloud_ceiling_regmap.sv \
+    hdl/cpu_if.sv \
+    hdl/gpmc_sync.sv \
+    hdl/pll.v \
+    hdl/string_driver.v \
+    hdl/extra_strings.v \
+    hdl/parallel_strings.v \
+    hdl/cloud_ceiling_regmap_wrapper.sv \
+    hdl/top.sv
+
+# Remove assert statements
+chformal -remove
 
 synth_ice40 -top top
 write_json out/cloud_ceiling.synth.json

@@ -1,5 +1,7 @@
 deps
 lscc
+slpp_all
+*.cf
 out
 modelsim
 *.swp

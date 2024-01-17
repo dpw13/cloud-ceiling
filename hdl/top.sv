@@ -21,6 +21,8 @@ module top(
 	output [3:0]  white_led_sdi
 );
 
+	import cloud_ceiling_regmap_pkg::*;
+
 	localparam GPMC_ADDR_WIDTH = 16;
 	localparam GPMC_DATA_WIDTH = 16;
 	localparam FIFO_ADDR_WIDTH = 13;
@@ -48,8 +50,8 @@ module top(
 		.locked(pll_locked)
 	);
 
-	reg reset_ms_100 = 1'b1;
-	reg reset_100 = 1'b1;
+	logic reset_ms_100 = 1'b1;
+	logic reset_100 = 1'b1;
 	always @(posedge clk_100)
 	begin
 		// Double-sync reset onto clk_100
@@ -57,8 +59,8 @@ module top(
 		reset_100 <= reset_ms_100;
 	end
 
-	reg reset_ms_20 = 1'b1;
-	reg reset_20 = 1'b1;
+	logic reset_ms_20 = 1'b1;
+	logic reset_20 = 1'b1;
 	always @(posedge clk_20)
 	begin
 		// Double-sync reset onto clk_20
@@ -67,8 +69,8 @@ module top(
 		reset_20 <= reset_ms_20;
 	end
 
-	reg gpmc_reset_ms = 1'b1;
-	reg gpmc_reset = 1'b1;
+	logic gpmc_reset_ms = 1'b1;
+	logic gpmc_reset = 1'b1;
 	always @(posedge gpmc_clk)
 	begin
 		// Double-sync reset onto gpmc_clk
@@ -80,11 +82,16 @@ module top(
 	wire gpmc_rd_en;
 	wire gpmc_wr_en;
 	wire [GPMC_ADDR_WIDTH:0] gpmc_address;
-	reg  [GPMC_DATA_WIDTH-1:0] gpmc_data_in;
+	logic  [GPMC_DATA_WIDTH-1:0] gpmc_data_in;
 	wire [GPMC_DATA_WIDTH-1:0] gpmc_data_out;
 
 	// Light LED[1] when there's a GPMC transaction
 	assign led[1] = ~gpmc_csn1;
+
+	cpu_if#(
+		.ADDR_WIDTH(GPMC_ADDR_WIDTH),
+		.DATA_WIDTH(GPMC_DATA_WIDTH)
+	) cpuif(reset_100, clk_100);
 
 	gpmc_sync # (
 		.ADDR_WIDTH(GPMC_ADDR_WIDTH),
@@ -99,134 +106,57 @@ module top(
 		.gpmc_oe_n(gpmc_oen),
 
 		// HOST INTERFACE
-		.rd_en(gpmc_rd_en),
-		.wr_en(gpmc_wr_en),
-		.address_valid(gpmc_address_valid),
-		.address(gpmc_address),
-		.data_out(gpmc_data_out),
-		.data_in(gpmc_data_in)
+		.cpuif(cpuif.cpu)
 	);
 
-	reg [15:0] basic_data_out = 0;
-	reg [15:0] scratch = 16'h1234;
-	reg        addr_valid_q;
-	reg [15:0] last_addr = 0;
-	reg [15:0] last_addr_q = 0;
+    wire cloud_ceiling_regmap__in_t hwif_in;
+    wire cloud_ceiling_regmap__out_t hwif_out;
 
-	reg gpmc_reset_100_ms, gpmc_reset_100;
-	reg gpmc_reset_20_ms, gpmc_reset_20;
-	reg gpmc_locked_ms, gpmc_locked;
+	cloud_ceiling_regmap_wrapper regs (
+		.cpuif(cpuif.dev),
 
-	always @(posedge gpmc_clk)
-	begin : BASIC_REGS
-		// Basic info regs
-		addr_valid_q <= gpmc_address_valid;
-		if (gpmc_address_valid && !addr_valid_q) begin
-			last_addr <= gpmc_address;
-			last_addr_q <= last_addr;
-		end
+		.hwi(hwif_in),
+		.hwo(hwif_out)
+	);
 
-		gpmc_reset_100_ms <= reset_100;
-		gpmc_reset_100 <= gpmc_reset_100_ms;
-		gpmc_reset_20_ms <= reset_20;
-		gpmc_reset_20 <= gpmc_reset_20_ms;
-		gpmc_locked_ms <= pll_locked;
-		gpmc_locked <= gpmc_locked_ms;
+	logic       fifo_overflow;
+	logic       fifo_underflow;
+	logic [FIFO_ADDR_WIDTH:0] fifo_empty_count;
 
-		// Read registers
-		basic_data_out <= 16'h0000;
-		if (gpmc_address_valid) begin
-			if (gpmc_address == 16'h0) begin
-				// ID register
-				basic_data_out <= 16'hC10D;
-			end else if (gpmc_address == 16'h2) begin
-				basic_data_out <= scratch;
-			end else if (gpmc_address == 16'h4) begin
-				// reset status
-				basic_data_out[15:2] <= 0;
-				basic_data_out[1:0] <= { gpmc_reset_100, gpmc_reset_20 };
-			end
-		end
+	assign hwif_in.REGS.RESET_STATUS_REG.RESET_100.next = reset_100;
+	assign hwif_in.REGS.RESET_STATUS_REG.RESET_20.next = reset_20;
+	assign hwif_in.REGS.FIFO_STATUS_REG.UNDERFLOW.hwset = fifo_overflow;
+	assign hwif_in.REGS.FIFO_STATUS_REG.OVERFLOW.hwset = fifo_underflow;
+	assign hwif_in.REGS.FIFO_EMPTY_REG.COUNT.next = fifo_empty_count;
 
-		// Write registers
-		if (gpmc_wr_en) begin
-			if (gpmc_address == 16'h2) begin
-				scratch <= gpmc_data_out;
-			end
-		end
-	end
+	logic color_valid;
+	logic [23:0] color_in; // Cold Red Warm
 
-	reg [15:0] fifo_data_out = 0;
-	wire       fifo_overflow;
-	reg        fifo_overflow_latched = 0;
-	wire       fifo_underflow;
-	reg        fifo_underflow_latched = 0;
-	reg        fifo_clear_err = 0;
-	wire [FIFO_ADDR_WIDTH:0] fifo_empty_count;
+	assign color_in = hwif_out.REGS.WHITE_COLOR_REG.VALUE.value;
+	assign color_valid = hwif_out.REGS.WHITE_COLOR_REG.VALUE.swmod;
 
-	always @(posedge gpmc_clk)
-	begin : FIFO_STATUS
-		if (fifo_clear_err)
-			fifo_overflow_latched <= 1'b0;
-			fifo_underflow_latched <= 1'b0;
-
-		if (fifo_overflow)
-			fifo_overflow_latched <= 1'b1;
-		if (fifo_underflow)
-			fifo_underflow_latched <= 1'b1;
-	end
-
-	reg color_valid = 1'b0;
-	reg [23:0] color_in = 24'h400818; // Cold Red Warm
-
-	always @(posedge gpmc_clk)
-	begin : FIFO_REGS
-		// FIFO status regs
-
-		// Read registers
-		fifo_data_out <= 16'h0000;
-		if (gpmc_address_valid) begin
-			if (gpmc_address == 16'h10) begin
-				// Status
-				fifo_data_out[15:5] <= 0;
-				fifo_data_out[4] <= fifo_overflow_latched;
-				fifo_data_out[4:1] <= 0;
-				fifo_data_out[0] <= fifo_underflow_latched;
-			end else if (gpmc_address == 16'h12) begin
-				// Empty count
-				fifo_data_out <= fifo_empty_count;
-			end
-		end
-
-		fifo_clear_err <= 1'b0;
-		color_valid <= 1'b0;
-		// Write registers
-		if (gpmc_wr_en) begin
-			if (gpmc_address == 16'h10) begin
-				// Set bit zero to clear FIFO errors
-				fifo_clear_err <= gpmc_data_out[0];
-			end else if (gpmc_address == 16'h14) begin
-				color_in[15:0] <= gpmc_data_out;
-			end else if (gpmc_address == 16'h16) begin
-				color_in[23:16] <= gpmc_data_out[7:0];
-				color_valid <= 1'b1;
-			end
-		end
-	end
-
-	// OR together all data outputs
-	always @(posedge gpmc_clk) begin
-		gpmc_data_in <= basic_data_out | fifo_data_out;
-	end
-
-	wire gpmc_fifo_write;
+	logic color_fifo_write;
+	logic [15:0] color_fifo_write_data;
 	// Anything in the second page will write to the FIFO
-	assign gpmc_fifo_write = (gpmc_wr_en && gpmc_address[15:12] == 4'h1);
+	assign color_fifo_write = (hwif_out.FIFO_MEM.req && hwif_out.FIFO_MEM.req_is_wr);
+	assign color_fifo_write_data = hwif_out.FIFO_MEM.wr_data;
 
-	reg fifo_toggle = 1'b0;
+	assign hwif_in.FIFO_MEM.rd_data = '0;
+
+	always_ff @(posedge clk_100) begin
+		if(reset_100) begin
+			hwif_in.FIFO_MEM.rd_ack <= 1'b0;
+			hwif_in.FIFO_MEM.wr_ack <= 1'b0;
+		end else begin
+			hwif_in.FIFO_MEM.rd_ack <= hwif_out.FIFO_MEM.req && !hwif_out.FIFO_MEM.req_is_wr;
+			hwif_in.FIFO_MEM.wr_ack <= hwif_out.FIFO_MEM.req &&  hwif_out.FIFO_MEM.req_is_wr;
+		end
+	end
+
+	logic fifo_toggle = 1'b0;
 	always @(posedge gpmc_clk)
 	begin
-		if (gpmc_fifo_write)
+		if (color_fifo_write)
 			fifo_toggle <= ~fifo_toggle;
 	end
 
@@ -240,13 +170,13 @@ module top(
 
 	SimpleFifo # (
 		//.kLatency(2),
-		//.kDataWidth(8),
-		//.kAddrWidth(12)
+		//.kDataWidth(16),
+		//.kAddrWidth(13)
 	) pixel_fifo (
-		.IClk(gpmc_clk),
-		.iReset(gpmc_reset),
-		.iData(gpmc_data_out),
-		.iWr(gpmc_fifo_write),
+		.IClk(clk_100),
+		.iReset(reset_100),
+		.iData(color_fifo_write_data),
+		.iWr(color_fifo_write),
 		.iEmptyCount(fifo_empty_count),
 		.iOverflow(fifo_overflow),
 

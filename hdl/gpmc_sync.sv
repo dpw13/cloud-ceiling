@@ -8,58 +8,45 @@ module gpmc_sync #(
     parameter ADDR_WIDTH = 16,
     parameter DATA_WIDTH = 16
 ) (
+    // HOST INTERFACE
+    cpu_if.cpu cpuif,
+
     // GPMC INTERFACE
 
     // Address[16:1] and Data[15:0]
-    inout  [15:0]            gpmc_ad,
+    inout wire [15:0] gpmc_ad,
     // Address Valid (active low) or Address Latch En (NAND mode)
-    input                    gpmc_adv_n,
+    input wire        gpmc_adv_n,
     // Chip select 1
-    input                    gpmc_cs_n,
+    input wire        gpmc_cs_n,
     // Write En (active low)
-    input                    gpmc_we_n,
+    input wire        gpmc_we_n,
     // Output En (active low)
-    input                    gpmc_oe_n,
-    input                    gpmc_clk,
-
-    // HOST INTERFACE
-    output                   rd_en,
-    output                   wr_en,
-    output                   address_valid,
-    output [ADDR_WIDTH:0]    address,
-    output [DATA_WIDTH-1:0]  data_out,
-    input  [DATA_WIDTH-1:0]  data_in
+    input wire        gpmc_oe_n,
+    input wire        gpmc_clk
 );
 
-reg [ADDR_WIDTH-1:0] addr_lcl;
-reg [DATA_WIDTH-1:0] data_out_lcl;
+logic [ADDR_WIDTH-1:0] addr_lcl = '0;
+logic [DATA_WIDTH-1:0] data_out_lcl = '0;
 
 wire [DATA_WIDTH-1:0] gpmc_data_out;
 wire [DATA_WIDTH-1:0] gpmc_ad_in;
 
-reg rd_en_lcl = 1'b0;
-reg wr_en_lcl = 1'b0;
-reg address_valid_lcl;
+logic rd_en_lcl = 1'b0;
+logic wr_en_lcl = 1'b0;
+logic address_valid_lcl = 1'b0;
 
-initial begin
-    rd_en_lcl <= 1'b0;
-    rd_en_lcl <= 1'b0;
-    address_valid_lcl <= 1'b0;
-    addr_lcl <= 0;
-    data_out_lcl <= 0;
-end
-
-assign rd_en = rd_en_lcl;
-assign wr_en = wr_en_lcl;
-assign address_valid = address_valid_lcl;
+assign cpuif.req = rd_en_lcl | wr_en_lcl;
+assign cpuif.req_is_wr = wr_en_lcl;
 // AD contains address [17:1], with the bottom bit represented by the
 // byte-enables. We don't use the enables. Add a zero to the end of
 // the address just to make calls to devmem match the actual register
 // addresses.
-assign address = { addr_lcl, 1'b0 };
-assign data_out = data_out_lcl;
+assign cpuif.addr = { addr_lcl, 1'b0 };
+assign cpuif.wr_data = data_out_lcl;
+assign cpuif.wr_biten = '1;
 
-assign gpmc_data_out = data_in;
+assign gpmc_data_out = cpuif.rd_data;
 
 //Tri-State buffer control
 SB_IO # (

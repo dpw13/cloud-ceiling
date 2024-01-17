@@ -5,13 +5,19 @@ FOOTPRNT = tq144
 
 BW_BASE = /home/dwagner/Documents/git/BeagleWire
 
+SV_SRC = \
+	hdl/cpu_if.sv \
+	hdl/gpmc_sync.sv \
+	hdl/top.sv
+
+GEN_SRC = \
+	deps/gen/cloud_ceiling_regmap.sv
+
 VER_SRC = \
 	hdl/pll.v \
-	hdl/gpmc_sync.v \
 	hdl/string_driver.v \
 	hdl/extra_strings.v \
-	hdl/parallel_strings.v \
-	hdl/top.v
+	hdl/parallel_strings.v
 
 VER_TB_SRC = Verilog/Testbench/tb_top.v
 
@@ -45,10 +51,11 @@ ICECUBE = /opt/lscc/iCEcube2.2020.12
 
 all: $(BUILD)/$(PROJ).bin
 
-${BUILD}/${PROJ}.synth.json : ${VER_SRC} ${VHDL_SRC} ${PROJ_FILE}
-	$(Q) echo -n "Synthesis ... "
+${BUILD}/${PROJ}.synth.json : ${SV_SRC} ${VER_SRC} ${VHDL_SRC} ${GEN_SRC} ${PROJ_FILE}
+	$(Q) echo "Synthesis ... "
 	$(Q) mkdir -p $(BUILD)
-	$(Q) yosys -m ghdl -s ${PROJ_FILE}
+	$(Q) ghdl -a ${VHDL_SRC}
+	$(Q) yosys -s ${PROJ_FILE}
 	$(Q) echo " Done"
 
 ${BUILD}/${PROJ}.asc : ${BUILD}/${PROJ}.synth.json ${PIN_SRC} ${PREPACK_PY}
@@ -87,12 +94,17 @@ deps/gen/pkg_cloud_ceiling_regmap.sv: docs/regs.rdl
 	$(Q) mkdir -p deps/gen
 	$(Q) peakrdl uvm $? -o $@
 
+deps/gen/cloud_ceiling_regmap.sv: docs/regs.rdl
+	$(Q) peakrdl regblock --cpuif passthrough $? -o deps/gen
+
 # Note that the order here does matter
-modelsim/sources.list: deps/uvm/src/uvm_pkg.sv deps/gen/pkg_cloud_ceiling_regmap.sv
+modelsim/sources.list: deps/uvm/src/uvm_pkg.sv deps/gen/pkg_cloud_ceiling_regmap.sv deps/gen/cloud_ceiling_regmap.sv
 	$(Q) mkdir -p modelsim
 	$(Q) echo ../deps/uvm/src/uvm_pkg.sv > modelsim/sources.list
 	$(Q) echo ../deps/uvm/src/dpi/uvm_dpi.cc >> modelsim/sources.list
 	$(Q) echo ../deps/gen/pkg_cloud_ceiling_regmap.sv >> modelsim/sources.list
+	$(Q) echo ../deps/gen/cloud_ceiling_regmap.sv >> modelsim/sources.list
+	$(Q) echo ../deps/gen/cloud_ceiling_regmap_pkg.sv >> modelsim/sources.list
 
 	$(Q) cd modelsim && find ../hdl -name '*.v' >> sources.list
 	$(Q) cd modelsim && find ../hdl -name 'pkg_*.sv' >> sources.list

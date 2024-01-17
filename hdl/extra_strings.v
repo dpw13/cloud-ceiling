@@ -76,9 +76,9 @@ module extra_strings #(
         end
     end
 
-    genvar string;
+    genvar s;
     generate
-        for (string = 0; string < N_STRINGS; string = string + 1) begin
+        for (s = 0; s < N_STRINGS; s = s + 1) begin
             string_driver #(
                 .CLK_PERIOD_NS(50),
                 .DATA_WIDTH(24)
@@ -87,8 +87,8 @@ module extra_strings #(
                 .pixel_data(color_in),
                 .pixel_data_valid(data_valid),
                 .h_blank(h_blank_q),
-                .sdi(led_sdi[string]),
-                .string_ready(string_ready[string])
+                .sdi(led_sdi[s]),
+                .string_ready(string_ready[s])
             );
         end
     endgenerate

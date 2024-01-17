@@ -47,9 +47,11 @@ begin
 	IToggle: process(IClk)
 	begin
 		if rising_edge(IClk) then
+--synthesis translate_off
 			assert not (iEvent and not iReadyLcl)
 				report "Event occurred before EventXing core was ready"
 				severity error;
+--synthesis translate_on
 
 			if iReadyLcl and iEvent then
 				iLclToggle <= not iLclToggle;

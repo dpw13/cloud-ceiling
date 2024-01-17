@@ -1,3 +1,8 @@
+property buffer_writes {
+    component = reg;
+    type = boolean;
+};
+
 addrmap cloud_ceiling_regmap {
     name = "Cloud Ceiling Regs";
 
@@ -39,6 +44,7 @@ addrmap cloud_ceiling_regmap {
 
             field {
                 desc = "Scratch field";
+                hw = na;
             } DATA[15:0] = 0;
         } SCRATCH_REG @ 0x2;
 
@@ -63,14 +69,14 @@ addrmap cloud_ceiling_regmap {
 
             field {
                 desc = "FIFO Underflow";
-                sw = r;
-                hw = w;
+                onwrite = woclr;
+                hwset;
             } UNDERFLOW[0:0] = 0;
 
             field {
                 desc = "FIFO Overflow";
-                sw = r;
-                hw = w;
+                onwrite = woclr;
+                hwset;
             } OVERFLOW[4:4] = 0;
         } FIFO_STATUS_REG @ 0x10;
 
@@ -87,9 +93,11 @@ addrmap cloud_ceiling_regmap {
         reg {
             name = "White Color";
             regwidth = 32;
+            buffer_writes;
 
             field {
                 desc = "Color Value";
+                swmod;
             } VALUE[23:0] = 0;
         } WHITE_COLOR_REG @ 0x14;
     } REGS @ 0x0;
@@ -99,6 +107,6 @@ addrmap cloud_ceiling_regmap {
         sw = w;
 
         memwidth = 256;
-        mementries = 1024;
+        mementries = 128;
     } external FIFO_MEM @ 0x1000;
 };
