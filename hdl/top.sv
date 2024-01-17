@@ -22,6 +22,7 @@ module top(
 );
 
 	import cloud_ceiling_regmap_pkg::*;
+	import pkg_cpu_if::*;
 
 	localparam GPMC_ADDR_WIDTH = 16;
 	localparam GPMC_DATA_WIDTH = 16;
@@ -69,20 +70,11 @@ module top(
 		reset_20 <= reset_ms_20;
 	end
 
-	wire gpmc_address_valid;
-	wire gpmc_rd_en;
-	wire gpmc_wr_en;
-	wire [GPMC_ADDR_WIDTH:0] gpmc_address;
-	logic  [GPMC_DATA_WIDTH-1:0] gpmc_data_in;
-	wire [GPMC_DATA_WIDTH-1:0] gpmc_data_out;
-
 	// Light LED[1] when there's a GPMC transaction
 	assign led[1] = ~gpmc_csn1;
 
-	cpu_if#(
-		.ADDR_WIDTH(GPMC_ADDR_WIDTH),
-		.DATA_WIDTH(GPMC_DATA_WIDTH)
-	) cpuif(.reset(reset_100), .clk(clk_100));
+	wire cpu_if_i cpuif_i;
+	wire cpu_if_o cpuif_o;
 
 	gpmc_sync # (
 		.ADDR_WIDTH(GPMC_ADDR_WIDTH),
@@ -97,18 +89,24 @@ module top(
 		.gpmc_oe_n(gpmc_oen),
 
 		// HOST INTERFACE
-		.cpuif(cpuif.cpu)
+		.clk(clk_100),
+		.reset(reset_100),
+		.cpuif_i(cpuif_i),
+		.cpuif_o(cpuif_o)
 	);
 
     wire cloud_ceiling_regmap__in_t hwif_in;
     wire cloud_ceiling_regmap__out_t hwif_out;
 
-	cloud_ceiling_regmap_wrapper regs (
-		.cpuif(cpuif.dev),
+    cloud_ceiling_regmap_wrapper regmap (
+        .clk(clk_100),
+        .reset(reset_100),
+		.cpuif_i(cpuif_i),
+		.cpuif_o(cpuif_o),
 
-		.hwi(hwif_in),
-		.hwo(hwif_out)
-	);
+        .hwif_in(hwif_in),
+        .hwif_out(hwif_out)
+    );
 
 	logic       fifo_overflow;
 	logic       fifo_underflow;
@@ -122,28 +120,26 @@ module top(
 
 	assign hwif_in.FIFO_MEM.rd_data = '0;
 
-	generate begin: gen_acks
-		logic rd_ack, wr_ack;
+	logic rd_ack, wr_ack;
 
-		always_ff @(posedge clk_100) begin
-			if(reset_100) begin
-				rd_ack <= 1'b0;
-				wr_ack <= 1'b0;
-			end else begin
-				rd_ack <= hwif_out.FIFO_MEM.req && !hwif_out.FIFO_MEM.req_is_wr;
-				wr_ack <= hwif_out.FIFO_MEM.req &&  hwif_out.FIFO_MEM.req_is_wr;
-			end
+	always_ff @(posedge clk_100) begin
+		if(reset_100) begin
+			rd_ack <= 1'b0;
+			wr_ack <= 1'b0;
+		end else begin
+			rd_ack <= hwif_out.FIFO_MEM.req && !hwif_out.FIFO_MEM.req_is_wr;
+			wr_ack <= hwif_out.FIFO_MEM.req &&  hwif_out.FIFO_MEM.req_is_wr;
 		end
+	end
 
-		assign hwif_in.FIFO_MEM.rd_ack = rd_ack;
-		assign hwif_in.FIFO_MEM.wr_ack = wr_ack;
-	end endgenerate
+	assign hwif_in.FIFO_MEM.rd_ack = rd_ack;
+	assign hwif_in.FIFO_MEM.wr_ack = wr_ack;
 
-	logic color_valid;
-	logic [23:0] color_in; // Cold Red Warm
+	logic white_value_valid;
+	logic [23:0] white_value_in; // Cold Red Warm
 
-	assign color_in = hwif_out.REGS.WHITE_COLOR_REG.VALUE.value;
-	assign color_valid = hwif_out.REGS.WHITE_COLOR_REG.VALUE.swmod;
+	assign white_value_in = hwif_out.REGS.WHITE_COLOR_REG.VALUE.value;
+	assign white_value_valid = hwif_out.REGS.WHITE_COLOR_REG.VALUE.swmod;
 
 	logic color_fifo_write;
 	logic [15:0] color_fifo_write_data;
@@ -166,6 +162,10 @@ module top(
 	wire        pxl_fifo_data_valid;
 	wire        pxl_fifo_underflow;
 
+	/*
+	 * Parameters are commented out here because the VHDL files are built separately
+	 * and the result has no parameterization.
+	 */
 	SimpleFifo # (
 		//.kLatency(2),
 		//.kDataWidth(16),
@@ -198,13 +198,13 @@ module top(
 	);
 
 	// Bring color_valid bit to clk_20
-	wire color_valid_20;
-	EventXing color_valid_xing (
+	wire white_value_valid_20;
+	EventXing white_value_valid_xing (
 		.IClk(clk_100),
 		.iReady(),
-		.iEvent(color_valid),
+		.iEvent(white_value_valid),
 		.OClk(clk_20),
-		.oEvent(color_valid_20)
+		.oEvent(white_value_valid_20)
 	);
 
 	// String drivers
@@ -233,8 +233,8 @@ module top(
 		.clk(clk_20),
 		.reset(reset_20),
 
-		.color_valid(color_valid_20),
-		.color_in(color_in),
+		.color_valid(white_value_valid_20),
+		.color_in(white_value_in),
 
 		.h_blank_in(1'b0),
 		.string_active(led[3]),

@@ -6,29 +6,13 @@ property buffer_writes {
 addrmap cloud_ceiling_regmap {
     name = "Cloud Ceiling Regs";
 
-    /*
-     * Burst support on memories.
-     *
-     * The default UVM implementation of uvm_reg_map splits all transactions into
-     * multiples of the bus width. It has to do this because it translates accesses
-     * through uvm_reg_bus_op, which uses uvm_reg_data_t, which has no concept of
-     * burst transfers. To avoid this, we would either need to provide extension
-     * data to the accesses or implement a different frontdoor implementation.
-     *
-     * Rather than doing either of the above, we treat the bus as being wider than
-     * it really is, up to the maximum UVM_REG_DATA_WIDTH. This allows uvm_reg_bus_op
-     * to represent bursts, and the driver receives wide uvm_tlm_gps, implementing
-     * the actual burst.
-     */
-    default accesswidth = 256;
+    default accesswidth = 16;
     default regwidth = 16;
     default sw = rw;
     default hw = r;
     littleendian;
 
     regfile {
-        /* Force all register accesses to be 16-bits. */
-        default accesswidth = 16;
         reg {
             name = "ID Register";
 
@@ -102,6 +86,20 @@ addrmap cloud_ceiling_regmap {
         } WHITE_COLOR_REG @ 0x14;
     } REGS @ 0x0;
 
+    /*
+     * Burst support on memories.
+     *
+     * The default UVM implementation of uvm_reg_map splits all transactions into
+     * multiples of the bus width. It has to do this because it translates accesses
+     * through uvm_reg_bus_op, which uses uvm_reg_data_t, which has no concept of
+     * burst transfers. To avoid this, we would either need to provide extension
+     * data to the accesses or implement a different frontdoor implementation.
+     *
+     * Rather than doing either of the above, we treat the bus as being wider than
+     * it really is, up to the maximum UVM_REG_DATA_WIDTH. This allows uvm_reg_bus_op
+     * to represent bursts, and the driver receives wide uvm_tlm_gps, implementing
+     * the actual burst.
+     */
     mem {
         name = "Color FIFO Memory";
         sw = w;

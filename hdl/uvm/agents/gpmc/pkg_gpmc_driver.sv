@@ -81,6 +81,12 @@ package pkg_gpmc_driver;
             end
             cs_cfg = cfg.cs_config[cs_id];
 
+            if (req.get_data_length() < 2) begin
+                // This can show up in some specific debugging conditions. Ignore the access.
+                req.set_response_status(UVM_TLM_OK_RESPONSE);
+                return;
+            end
+
             // Align to rising edge of FCLK
             if (~vif.fclk)
                 @(posedge vif.fclk);

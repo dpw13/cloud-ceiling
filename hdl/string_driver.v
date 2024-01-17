@@ -26,7 +26,7 @@ localparam kT1H_ns = 800;
 localparam kT0L_ns = 850;
 localparam kT1L_ns = 450;
 // Blank time
-localparam kBlank_ns = 50000;
+localparam kBlank_ns = 500;
 
 function integer get_count(input integer bit_period, clk_period);
     // Determine the minimum number of clock cycles for the bit

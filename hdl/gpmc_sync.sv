@@ -9,7 +9,10 @@ module gpmc_sync #(
     parameter DATA_WIDTH = 16
 ) (
     // HOST INTERFACE
-    cpu_if.cpu cpuif,
+    input wire clk,
+    input wire reset,
+    input wire pkg_cpu_if::cpu_if_i cpuif_i,
+    output wire pkg_cpu_if::cpu_if_o cpuif_o,
 
     // GPMC INTERFACE
 
@@ -36,21 +39,8 @@ logic wr_en_tgl = 1'b0;
 logic address_valid_tgl = 1'b0;
 
 //Tri-State buffer control
-SB_IO # (
-    .PIN_TYPE(6'b1010_01),
-    .PULLUP(1'b0)
-) gpmc_ad_io [15:0] (
-    .PACKAGE_PIN(gpmc_ad),
-    .OUTPUT_ENABLE(~gpmc_cs_n && ~gpmc_oe_n),
-    .D_OUT_0(data_in_lcl),
-    .D_IN_0(gpmc_ad_in),
-    .D_OUT_1(),
-    .D_IN_1(),
-    .LATCH_INPUT_VALUE(),
-    .CLOCK_ENABLE(1'b1),
-    .INPUT_CLK(gpmc_clk),
-    .OUTPUT_CLK()
-);
+assign gpmc_ad = ~gpmc_cs_n && ~gpmc_oe_n ? data_in_lcl : 16'hzzzz;
+assign gpmc_ad_in = gpmc_ad;
 
 always_ff @ (posedge gpmc_clk)
 begin
@@ -86,8 +76,8 @@ logic [ADDR_WIDTH-1:0] addr_cpu = '0;
 logic [DATA_WIDTH-1:0] wr_data = '0;
 logic req, req_is_wr;
 
-always_ff @(posedge cpuif.clk) begin
-    if (cpuif.reset) begin
+always_ff @(posedge clk) begin
+    if (reset) begin
         addr_valid_ms <= 1'b0;
         addr_valid_cpu <= 1'b0;
         addr_valid_cpu_q <= 1'b0;
@@ -144,15 +134,15 @@ always_ff @(posedge cpuif.clk) begin
         // No ACK timing is supported since no backpressure is possible. In the
         // future it's probably worth at least recording any protocol errors in
         // counters.
-        if (cpuif.rd_ack)
-            data_in_lcl <= cpuif.rd_data;
+        if (cpuif_i.rd_ack)
+            data_in_lcl <= cpuif_i.rd_data;
     end
 end
 
-assign cpuif.addr = addr_cpu;
-assign cpuif.req = req;
-assign cpuif.req_is_wr = req_is_wr;
-assign cpuif.wr_data = wr_data;
-assign cpuif.wr_biten = '1; // byte enables ignored for now
+assign cpuif_o.addr = addr_cpu;
+assign cpuif_o.req = req;
+assign cpuif_o.req_is_wr = req_is_wr;
+assign cpuif_o.wr_data = wr_data;
+assign cpuif_o.wr_biten = '1; // byte enables ignored for now
 
 endmodule

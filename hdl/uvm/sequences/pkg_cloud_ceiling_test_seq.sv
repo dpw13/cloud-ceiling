@@ -47,7 +47,12 @@ package pkg_cloud_ceiling_test_seq;
 
             regmodel.REGS.FIFO_EMPTY_REG.read(status, rdata);
 
-            #100ns;
+            /* Write the white color register and make sure data gets sent. */
+            // TODO: endianness
+            #5000ns;
+            regmodel.REGS.WHITE_COLOR_REG.write(status, 32'h12005634);
+
+            #5000ns;
         endtask
     endclass //cloud_ceiling_test_seq extends uvm_sequence
     

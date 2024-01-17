@@ -6,11 +6,13 @@ FOOTPRNT = tq144
 BW_BASE = /home/dwagner/Documents/git/BeagleWire
 
 SV_SRC = \
-	hdl/cpu_if.sv \
+	hdl/pkg_cpu_if.sv \
 	hdl/gpmc_sync.sv \
+	hdl/cloud_ceiling_regmap_wrapper.sv \
 	hdl/top.sv
 
 GEN_SRC = \
+	deps/gen/cloud_ceiling_regmap_pkg.sv \
 	deps/gen/cloud_ceiling_regmap.sv
 
 VER_SRC = \
