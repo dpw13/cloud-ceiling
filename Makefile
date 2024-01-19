@@ -10,6 +10,7 @@ SV_SRC = \
 	hdl/clk_xing/vector_xing.sv \
 	hdl/fifo/dp_ram.sv \
 	hdl/fifo/fifo_counter_half.sv \
+	hdl/fifo/simple_fifo.sv \
 	hdl/pkg_cpu_if.sv \
 	hdl/gpmc_sync.sv \
 	hdl/cloud_ceiling_regmap_wrapper.sv \
@@ -26,15 +27,6 @@ VER_SRC = \
 	hdl/parallel_strings.v
 
 VER_TB_SRC = Verilog/Testbench/tb_top.v
-
-VHDL_SRC = \
-	hdl/VHDL/Packages/PkgUtils.vhd \
-	hdl/VHDL/ClockXing/EventXing.vhd \
-	hdl/VHDL/ClockXing/VectorXing.vhd \
-	hdl/VHDL/Fifo/DpRam.vhd \
-	hdl/VHDL/Fifo/DpParityRam.vhd \
-	hdl/VHDL/Fifo/FifoCounterHalf.vhd \
-	hdl/VHDL/Fifo/SimpleFifo.vhd
 
 TOP_TB_ENT = tb_led_top
 TOP_ENT = top
@@ -57,10 +49,9 @@ ICECUBE = /opt/lscc/iCEcube2.2020.12
 
 all: $(BUILD)/$(PROJ).bin
 
-${BUILD}/${PROJ}.synth.json : ${SV_SRC} ${VER_SRC} ${VHDL_SRC} ${GEN_SRC} ${PROJ_FILE}
+${BUILD}/${PROJ}.synth.json : ${SV_SRC} ${VER_SRC} ${GEN_SRC} ${PROJ_FILE}
 	$(Q) echo "Synthesis ... "
 	$(Q) mkdir -p $(BUILD)
-	$(Q) ghdl -a ${VHDL_SRC}
 	$(Q) yosys -s ${PROJ_FILE}
 	$(Q) echo " Done"
 
@@ -118,13 +109,12 @@ modelsim/sources.list: deps/uvm/src/uvm_pkg.sv deps/gen/pkg_cloud_ceiling_regmap
 
 compile: modelsim/sources.list modelsim/modelsim.mpf
 	$(Q) cd modelsim && vlog -modelsimini modelsim.mpf +incdir+../deps/uvm/src ${VLOGFLAGS} -ccflags "${CCFLAGS}" -sv17compat -F sources.list
-	$(Q) cd modelsim && vcom -modelsimini modelsim.mpf $(addprefix "../",${VHDL_SRC})
 
 vsim: compile
-	$(Q) cd modelsim && vsim -modelsimini modelsim.mpf -t ns ${TOP_TB_ENT} +UVM_NO_RELNOTES -L ice_vlg
+	$(Q) cd modelsim && vsim -suppress 3009,3016,3043 -modelsimini modelsim.mpf -t ns ${TOP_TB_ENT} +UVM_NO_RELNOTES -L ice_vlg
 
 vsimc: compile
-	$(Q) cd modelsim && vsim -c -modelsimini modelsim.mpf -t ns ${TOP_TB_ENT} +UVM_NO_RELNOTES -L ice_vlg
+	$(Q) cd modelsim && vsim -suppress 3009,3016,3043 -c -modelsimini modelsim.mpf -t ns ${TOP_TB_ENT} +UVM_NO_RELNOTES -L ice_vlg
 
 load:
 	sh /home/debian/load-fw/bw-prog.sh $(BUILD)/$(PROJ).bin

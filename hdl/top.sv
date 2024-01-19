@@ -164,30 +164,25 @@ module top(
 	wire        pxl_fifo_data_valid;
 	wire        pxl_fifo_underflow;
 
-	/*
-	 * Parameters are commented out here because the VHDL files are built separately
-	 * and the result has no parameterization.
-	 */
-	SimpleFifo # (
-		//.kLatency(2),
-		//.kDataWidth(16),
-		//.kAddrWidth(13)
+	simple_fifo # (
+		.LATENCY(2),
+		.DATA_WIDTH(16),
+		.ADDR_WIDTH(13)
 	) pixel_fifo (
-		.IClk(clk_100),
-		.iReset(reset_100),
-		.iData(color_fifo_write_data),
-		.iWr(color_fifo_write),
-		.iEmptyCount(fifo_empty_count),
-		.iOverflow(fifo_overflow),
+		.iclk(clk_100),
+		.ireset(reset_100),
+		.idata(color_fifo_write_data),
+		.iwr(color_fifo_write),
+		.iempty_count(fifo_empty_count),
+		.ioverflow(fifo_overflow),
 
-		.OClk(clk_20),
-		.oReset(reset_20),
-		.oData(pxl_fifo_data),
-		.oDataValid(pxl_fifo_data_valid),
-		.oDataErr(),
-		.oRd(pxl_fifo_read),
-		.oFullCount(pxl_fifo_full_count),
-		.oUnderflow(pxl_fifo_underflow)
+		.oclk(clk_20),
+		.oreset(reset_20),
+		.odata(pxl_fifo_data),
+		.odata_valid(pxl_fifo_data_valid),
+		.ord(pxl_fifo_read),
+		.ofull_count(pxl_fifo_full_count),
+		.ounderflow(pxl_fifo_underflow)
 	);
 
 	// Bring the underflow status back to the GPMC clock domain

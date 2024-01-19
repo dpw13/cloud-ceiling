@@ -1,12 +1,3 @@
-plugin -i ghdl
-
-# Import previously-elaborated VHDL
-# Lower-level files must be imported first
-ghdl SimpleFifo
-
-# For simulation
-#write_verilog out/SimpleFifo.v
-
 plugin -i systemverilog
 read_systemverilog \
     deps/gen/cloud_ceiling_regmap_pkg.sv \
@@ -15,6 +6,7 @@ read_systemverilog \
     hdl/clk_xing/vector_xing.sv \
     hdl/fifo/dp_ram.sv \
     hdl/fifo/fifo_counter_half.sv \
+    hdl/fifo/simple_fifo.sv \
     hdl/pkg_cpu_if.sv \
     hdl/gpmc_sync.sv \
     hdl/pll.v \
