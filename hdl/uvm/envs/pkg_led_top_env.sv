@@ -31,6 +31,25 @@ package pkg_led_top_env;
                 m_predictor = uvm_reg_predictor#(uvm_tlm_gp)::type_id::create("m_predictor", this);
 
                 m_regmodel.build();
+                /*
+                 * Override the generated map's bus width to 2 bytes instead of 32 (the maximum
+                 * burst width). This is a hack that allows the reg adapter to issue full-length
+                 * bursts to the FIFO while ensuring that 32-bit accesses get split into multiple
+                 * 16-bit accesses.
+                 *
+                 * Why don't the accesses to the REGS window automatically get split? Because
+                 * uvm_reg_map::get_physical_addresses_to_map queries the parent map and uses
+                 * its bus width, even if the submap is narrower.
+                 *
+                 * An alternative implementation would be to create multiple regmaps and bind them
+                 * together here, but this hack essentially does the same thing while still using
+                 * most of what peakrdl produces for us.
+                 *
+                 * So why doesn't this result in the FIFO_MEM burst_write getting chopped up into
+                 * 2-byte accesses? I still don't know and at this point don't care. The UVM reg
+                 * and memory implementations leave a lot to be desired.
+                 */
+                m_regmodel.default_map.configure(m_regmodel, 0, 2, UVM_LITTLE_ENDIAN);
                 m_regmodel.lock_model();
 
                 uvm_config_db#(cloud_ceiling_regmap)::set(null, "uvm_test_top", "m_regmodel", m_regmodel);

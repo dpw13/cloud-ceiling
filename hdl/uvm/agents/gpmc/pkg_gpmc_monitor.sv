@@ -70,7 +70,7 @@ package pkg_gpmc_monitor;
                     end
                 end
 
-                `uvm_info(get_type_name(), $sformatf("CS assert: %0x ID %0d active %0d", vif.cs_n, cs_id, cs_active), UVM_LOW)
+                `uvm_info(get_type_name(), $sformatf("CS assert: %0x ID %0d active %0d", vif.cs_n, cs_id, cs_active), UVM_FULL)
 
                 data_phase_countdown = -1;
                 while (cs_active && vif.cs_n[cs_id] == 1'b0) begin
@@ -102,7 +102,7 @@ package pkg_gpmc_monitor;
                             addr[bit_offset + DATA_WIDTH +: ADDR_WIDTH] = vif.addr[0 +: ADDR_WIDTH];
                         end
 
-                        `uvm_info(get_type_name(), $sformatf("CS %0d ADV_n ADDR %0x", cs_id, addr), UVM_LOW)
+                        `uvm_info(get_type_name(), $sformatf("CS %0d ADV_n ADDR %0x", cs_id, addr), UVM_DEBUG)
                     end else if (~vif.oe_n_re_n) begin
                         // if OEn asserts without ADVn, that indicates a read
                         // The GPMC read timing is specified relative to the start of CS. Compute
@@ -113,7 +113,7 @@ package pkg_gpmc_monitor;
                             int rd_delay = cs_cfg.rd_access_time - cs_cfg.oe_on_time;
                             // Convert from FCLK period to CLK period
                             data_phase_countdown = rd_delay/(cs_cfg.gpmc_fclk_divider + 1);
-                            `uvm_info(get_type_name(), $sformatf("CS %0d OE_n, delay %0d FCLKs (%0d CLKs)", cs_id, rd_delay, data_phase_countdown), UVM_LOW)
+                            `uvm_info(get_type_name(), $sformatf("CS %0d OE_n, delay %0d FCLKs (%0d CLKs)", cs_id, rd_delay, data_phase_countdown), UVM_DEBUG)
                             req.set_read();
                             req.set_address(addr);
 
@@ -137,7 +137,7 @@ package pkg_gpmc_monitor;
                             int wr_delay = cs_cfg.wr_access_time - cs_cfg.we_on_time;
                             // Convert from FCLK period to CLK period
                             data_phase_countdown = wr_delay/(cs_cfg.gpmc_fclk_divider + 1);
-                            `uvm_info(get_type_name(), $sformatf("CS %0d WE_n, delay %0d FCLKs (%0d CLKs)", cs_id, wr_delay, data_phase_countdown), UVM_LOW)
+                            `uvm_info(get_type_name(), $sformatf("CS %0d WE_n, delay %0d FCLKs (%0d CLKs)", cs_id, wr_delay, data_phase_countdown), UVM_DEBUG)
                             req.set_write();
                             req.set_address(addr);
 
@@ -153,7 +153,7 @@ package pkg_gpmc_monitor;
                     // wait monitoring
                     if (wait_pin_id < 0 || vif.wait_[wait_pin_id] != wait_active) begin
                         if (data_phase_countdown == 0) begin
-                            `uvm_info(get_type_name(), $sformatf("data beat CS %0d AD %0x", cs_id, vif.data_i), UVM_LOW)
+                            `uvm_info(get_type_name(), $sformatf("data beat CS %0d AD %0x", cs_id, vif.data_i), UVM_DEBUG)
                             payload.push_back(vif.data_i[7:0]);
                             byte_enable.push_back(vif.be0_n_cle);
 
@@ -169,7 +169,7 @@ package pkg_gpmc_monitor;
                     @(posedge vif.clk, posedge vif.cs_n[cs_id]);
                 end // CSn
 
-                `uvm_info(get_type_name(), $sformatf("CS %0d deassert", cs_id), UVM_LOW)
+                `uvm_info(get_type_name(), $sformatf("CS %0d deassert", cs_id), UVM_DEBUG)
 
                 req.set_data_length(payload.size());
                 req.set_byte_enable_length(byte_enable.size());

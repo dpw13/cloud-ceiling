@@ -90,7 +90,7 @@ package pkg_gpmc_driver;
             // Align to rising edge of FCLK
             if (~vif.fclk)
                 @(posedge vif.fclk);
-            `uvm_info(get_type_name(), $sformatf("Register request %s using %s", req.convert2string(), cs_cfg.convert2string()), UVM_LOW)
+            `uvm_info(get_type_name(), $sformatf("Register request %s using %s", req.convert2string(), cs_cfg.convert2string()), UVM_FULL)
 
             while (1) begin
                 if (cycle == cs_cfg.cs_on_time)
@@ -205,7 +205,7 @@ package pkg_gpmc_driver;
                     if (cycle == cs_cfg.we_on_time)
                         vif.we_n <= 1'b0;
                     if (cycle >= cs_cfg.wr_data_on_ad_mux_bus)
-                        vif.data_o <= {req.m_data[2*burst_beat], req.m_data[2*burst_beat + 1]};
+                        vif.data_o <= {req.m_data[2*burst_beat + 1], req.m_data[2*burst_beat]};
                     if (cycle >= burst_we_off) begin
                         vif.we_n <= 1'b1;
                         vif.data_o <= 'z;
@@ -243,6 +243,8 @@ package pkg_gpmc_driver;
 
             req.set_response_status(UVM_TLM_OK_RESPONSE);
             vif.cs_n <= '1;
+
+            `uvm_info(get_type_name(), $sformatf("%s using %s", req.convert2string(), cs_cfg.convert2string()), UVM_MEDIUM)
         endtask
     endclass
 

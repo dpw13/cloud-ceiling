@@ -54,7 +54,7 @@ package pkg_led_top_test;
 
         virtual function void end_of_elaboration_phase(uvm_phase phase);
             uvm_top.print_topology();
-            uvm_top.set_report_verbosity_level_hier(UVM_FULL);
+            uvm_top.set_report_verbosity_level_hier(UVM_MEDIUM);
         endfunction
 
     endclass
