@@ -9,6 +9,7 @@ SV_SRC = \
 	hdl/clk_xing/event_xing.sv \
 	hdl/clk_xing/vector_xing.sv \
 	hdl/fifo/dp_ram.sv \
+	hdl/fifo/fifo_counter_half.sv \
 	hdl/pkg_cpu_if.sv \
 	hdl/gpmc_sync.sv \
 	hdl/cloud_ceiling_regmap_wrapper.sv \
