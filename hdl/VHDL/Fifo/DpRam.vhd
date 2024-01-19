@@ -40,7 +40,7 @@ end entity ; -- DpRam
 architecture arch of DpRam is
 
   type DataArray_t is array(natural range <>) of std_logic_vector(kDataWidth-1 downto 0);
-  signal Ram : DataArray_t(2**kAddrWidth-1 downto 0); 
+  signal RAM : DataArray_t(2**kAddrWidth-1 downto 0);
 
   signal oDataPipe : DataArray_t(kLatency-1 downto 0) := (others => (others => '0'));
 
