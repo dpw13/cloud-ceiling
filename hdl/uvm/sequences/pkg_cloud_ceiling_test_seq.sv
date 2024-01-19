@@ -50,7 +50,13 @@ package pkg_cloud_ceiling_test_seq;
             /* Write the white color register and make sure data gets sent. */
             // TODO: endianness
             #5000ns;
-            regmodel.REGS.WHITE_COLOR_REG.write(status, 32'h12005634);
+            tmp = 32'h12005634;
+            regmodel.REGS.WHITE_COLOR_L_REG.write(status, tmp[15:0]);
+            regmodel.REGS.WHITE_COLOR_H_REG.write(status, tmp[31:16]);
+            regmodel.REGS.WHITE_COLOR_L_REG.read(status, rdata[15:0]);
+            regmodel.REGS.WHITE_COLOR_H_REG.read(status, rdata[31:16]);
+            assert (status == UVM_IS_OK);
+            assert (rdata == tmp);
 
             #5000ns;
         endtask

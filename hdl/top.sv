@@ -138,8 +138,10 @@ module top(
 	logic white_value_valid;
 	logic [23:0] white_value_in; // Cold Red Warm
 
-	assign white_value_in = hwif_out.REGS.WHITE_COLOR_REG.VALUE.value;
-	assign white_value_valid = hwif_out.REGS.WHITE_COLOR_REG.VALUE.swmod;
+	assign white_value_in = {
+		hwif_out.REGS.WHITE_COLOR_H_REG.VALUE.value,
+		hwif_out.REGS.WHITE_COLOR_L_REG.VALUE.value};
+	assign white_value_valid = hwif_out.REGS.WHITE_COLOR_H_REG.VALUE.swmod;
 
 	logic color_fifo_write;
 	logic [15:0] color_fifo_write_data;

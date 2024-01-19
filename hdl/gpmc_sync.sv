@@ -136,6 +136,10 @@ always_ff @(posedge clk) begin
         // counters.
         if (cpuif_i.rd_ack)
             data_in_lcl <= cpuif_i.rd_data;
+
+        // Increment address on write bursts (read bursts aren't supported)
+        if (cpuif_i.wr_ack)
+            addr_valid_cpu <= addr_valid_cpu + 2;
     end
 end
 
