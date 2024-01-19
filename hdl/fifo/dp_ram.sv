@@ -29,9 +29,10 @@ module dp_ram #(
     output wire logic odata_valid
 );
 
+    logic[ADDR_WIDTH-1:0] oaddr_q;
     logic[DATA_WIDTH-1:0] RAM[2**ADDR_WIDTH-1:0]; 
     logic[DATA_WIDTH-1:0] odata_q;
-    logic ord_q = '{1'b0};
+    logic ord_q, ord_qq = 1'b0;
 
     initial RAM[0] <= 0;
 
@@ -41,16 +42,18 @@ module dp_ram #(
     end
 
     always_ff @(posedge oclk) begin : rd_proc
+        oaddr_q <= oaddr;
         // Reads occur constantly. There are some power savings to be had by powering down
         // the read side of RAMs, but I haven't implemented that here. The DataValid output
         // is provided for convenience for indicating the latency of the RAM.
         ord_q <= ord;
+        ord_qq <= ord_q;
         // yosys is not very smart about inferring RAMs. This output needs to be registered
         // with a very simple statement.
-        odata_q <= RAM[oaddr];
+        odata_q <= RAM[oaddr_q];
     end
 
     assign odata = odata_q;
-    assign odata_valid = ord_q;
+    assign odata_valid = ord_qq;
 
 endmodule

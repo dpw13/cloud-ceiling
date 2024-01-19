@@ -2,7 +2,13 @@
  * Top-level module for cloud ceiling.
  */
 
-module top(
+module top#(
+	// Production params
+	parameter int N_COLOR_STRINGS = 23,
+	parameter int N_WHITE_STRINGS = 4,
+	parameter int N_COLOR_LEDS_PER_STRING = 236,
+	parameter int N_WHITE_LEDS_PER_STRING = 118
+) (
 	input wire clk_100,
 	input wire glbl_reset,
 
@@ -34,12 +40,6 @@ module top(
 	//localparam N_WHITE_STRINGS = 2;
 	//localparam N_COLOR_LEDS_PER_STRING = 24;
 	//localparam N_WHITE_LEDS_PER_STRING = 24;
-
-	// Production params
-	localparam N_COLOR_STRINGS = 23;
-	localparam N_WHITE_STRINGS = 4;
-	localparam N_COLOR_LEDS_PER_STRING = 236;
-	localparam N_WHITE_LEDS_PER_STRING = 118;
 
 	wire clk_20;
 	wire pll_locked;
@@ -165,7 +165,6 @@ module top(
 	wire        pxl_fifo_underflow;
 
 	simple_fifo # (
-		.LATENCY(2),
 		.DATA_WIDTH(16),
 		.ADDR_WIDTH(13)
 	) pixel_fifo (

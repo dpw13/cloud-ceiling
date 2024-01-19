@@ -22,6 +22,10 @@ module tb_led_top;
     wire [15:0] gpmc_ad;
 
     top #(
+        .N_COLOR_STRINGS(5),
+        .N_WHITE_STRINGS(2),
+        .N_COLOR_LEDS_PER_STRING(16),
+        .N_WHITE_LEDS_PER_STRING(16)
     ) dut (
         .glbl_reset(glbl_reset),
         .clk_100(clk_100),
