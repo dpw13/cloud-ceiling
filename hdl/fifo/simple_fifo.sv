@@ -6,8 +6,6 @@
 
 // @brief A FIFO with configurable width and depth
 module simple_fifo #(
-    // The read latency of the FIFO
-    parameter bit[1:0] LATENCY = 2,
     // Log base 2 of the FIFO depth
     parameter int ADDR_WIDTH = 13,
     // The width of the data inputs and outputs
@@ -80,7 +78,6 @@ module simple_fifo #(
     // Actual dual-port RAM addresses do not contain the top bit, which is only used for
     // overflow/underflow detection
     dp_ram #(
-        .LATENCY(LATENCY),
         .ADDR_WIDTH(ADDR_WIDTH),
         .DATA_WIDTH(DATA_WIDTH)
     ) ram (
