@@ -10,6 +10,8 @@ module vector_xing#(
     // The width of the data to move between clock domains
     parameter int DATA_WIDTH = 32
 ) (
+    // The input reset.
+    input wire logic ireset,
     // The input clock. All i* signals are synchronous to this clock
     input wire logic iclk,
     // The data to transmit
