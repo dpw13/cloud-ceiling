@@ -191,22 +191,26 @@ module top(
 	);
 
 	// Bring the underflow status back to the GPMC clock domain
-	EventXing underflow_xing (
-		.IClk(clk_20),
-		.iReady(),
-		.iEvent(pxl_fifo_underflow),
-		.OClk(clk_100),
-		.oEvent(fifo_underflow)
+	event_xing underflow_xing (
+		.ireset(reset_20),
+		.iclk(clk_20),
+		.iready(),
+		.ievent(pxl_fifo_underflow),
+		.oreset(reset_100),
+		.oclk(clk_100),
+		.oevent(fifo_underflow)
 	);
 
 	// Bring color_valid bit to clk_20
 	wire white_value_valid_20;
-	EventXing white_value_valid_xing (
-		.IClk(clk_100),
-		.iReady(),
-		.iEvent(white_value_valid),
-		.OClk(clk_20),
-		.oEvent(white_value_valid_20)
+	event_xing white_value_valid_xing (
+		.ireset(reset_100),
+		.iclk(clk_100),
+		.iready(),
+		.ievent(white_value_valid),
+		.oreset(reset_20),
+		.oclk(clk_20),
+		.oevent(white_value_valid_20)
 	);
 
 	// String drivers

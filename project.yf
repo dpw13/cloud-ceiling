@@ -2,7 +2,6 @@ plugin -i ghdl
 
 # Import previously-elaborated VHDL
 # Lower-level files must be imported first
-ghdl EventXing
 ghdl SimpleFifo
 
 # For simulation
@@ -12,6 +11,8 @@ plugin -i systemverilog
 read_systemverilog \
     deps/gen/cloud_ceiling_regmap_pkg.sv \
     deps/gen/cloud_ceiling_regmap.sv \
+    hdl/clk_xing/event_xing.sv \
+    hdl/clk_xing/vector_xing.sv \
     hdl/pkg_cpu_if.sv \
     hdl/gpmc_sync.sv \
     hdl/pll.v \

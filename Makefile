@@ -6,14 +6,16 @@ FOOTPRNT = tq144
 BW_BASE = /home/dwagner/Documents/git/BeagleWire
 
 SV_SRC = \
+	hdl/clk_xing/event_xing.sv \
+	hdl/clk_xing/vector_xing.sv \
 	hdl/pkg_cpu_if.sv \
 	hdl/gpmc_sync.sv \
 	hdl/cloud_ceiling_regmap_wrapper.sv \
 	hdl/top.sv
 
 GEN_SRC = \
-	deps/gen/cloud_ceiling_regmap_pkg.sv \
-	deps/gen/cloud_ceiling_regmap.sv
+	deps/gen/cloud_ceiling_regmap.sv \
+	deps/gen/cloud_ceiling_regmap_pkg.sv
 
 VER_SRC = \
 	hdl/pll.v \
@@ -128,3 +130,4 @@ load:
 clean:
 	rm -rf modelsim
 	rm -rf $(BUILD)
+	rm -rf deps
