@@ -11,7 +11,7 @@ use json::JsonValue;
 use args::Args;
 use fb::fb_main;
 use msg::Message;
-use server::server_setup;
+use server::server_run;
 
 mod animations;
 mod args;
@@ -65,6 +65,6 @@ fn main() {
         print!("Error sending new config: {e}\n");
     }
 
-    rt.spawn(async move { server_setup(server_tx_cfg).await });
+    rt.spawn(async move { server_run(server_tx_cfg) });
     rt.block_on(async move { fb_main(&args, rx_cfg) });
 }

@@ -4,9 +4,9 @@ use std::cell::{Cell, RefCell, RefMut};
 use std::fs;
 use std::fs::File;
 use std::os::fd::AsRawFd;
+use std::ptr::read_volatile;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
-use volatile::Volatile;
 
 use crate::constants;
 
@@ -19,7 +19,7 @@ pub struct LedDisplay {
     #[allow(dead_code)]
     mmap_regs: RefCell<MmapMut>,
 
-    /* The actual memory-mapped registers as Volatile<u16> */
+    /* The actual memory-mapped registers as u16 */
     regs: *mut FpgaRegisters,
 
     /* The ledfb device file used for ioctl */
@@ -37,17 +37,14 @@ ioctl_write_int_bad!(flush_buffer, FB_IOC);
 
 #[repr(C)]
 pub struct FpgaRegisters {
-    id: Volatile<u16>, // 0
-    scratch: Volatile<u16>,
-    reset_status: Volatile<u16>, // 4
-    rsvd0: Volatile<u16>,
-    rsvd1: Volatile<u16>, // 8
-    rsvd2: Volatile<u16>,
-    rsvd3: Volatile<u16>, // C
-    rsvd4: Volatile<u16>,
-    fifo_status: Volatile<u16>, // 0x10
-    empty_count: Volatile<u16>, // 0x12
-    blank: Volatile<u16>,       // 0x14
+    id: u16, // 0
+    scratch: u16,
+    reset_status: u16, // 4
+    rsvd0: [u16;5],
+    fifo_status: u16, // 0x10
+    empty_count: u16, // 0x12
+    rsvd1: [u16;6],
+    blank: u16,       // 0x14
 }
 
 impl LedDisplay {
@@ -107,11 +104,11 @@ impl LedDisplay {
     }
 
     pub fn read_id(&self) -> u16 {
-        unsafe { (*self.regs).id.read() }
+        unsafe { read_volatile(&(*self.regs).id) }
     }
 
     pub fn empty_count(&self) -> usize {
-        unsafe { (*self.regs).empty_count.read() as usize }
+        unsafe { read_volatile(&(*self.regs).empty_count) as usize }
     }
 
     pub fn flush(&self) -> () {

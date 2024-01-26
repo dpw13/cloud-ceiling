@@ -1,112 +1,176 @@
-use hyper::service::{make_service_fn, service_fn};
-use hyper::{Body, Method, Request, Response, Server, StatusCode};
+use hyper::{
+    Method, Request, Response, StatusCode,
+    body::Bytes,
+    body::Incoming,
+    service::Service,
+};
+use http_body_util::{
+    Empty,
+    Full,
+    combinators::BoxBody,
+    BodyExt,
+};
 use json::JsonValue;
-use std::convert::Infallible;
+use std::future::Future;
 use std::net::SocketAddr;
-use tokio::sync;
+use std::pin::Pin;
+use tokio::{
+    sync,
+    net::TcpListener,
+};
+use hyper_util::{
+    rt::TokioExecutor,
+    rt::TokioIo,
+    server::conn::auto,
+};
 
 use crate::msg::{Message, VarMsg};
 
-async fn endpoint_impl(
-    req: Request<Body>,
+
+// We create some utility functions to make Empty and Full bodies
+// fit our broadened Response body type.
+fn empty() -> BoxBody<Bytes, hyper::Error> {
+    Empty::<Bytes>::new()
+        .map_err(|never| match never {})
+        .boxed()
+}
+fn full<T: Into<Bytes>>(chunk: T) -> BoxBody<Bytes, hyper::Error> {
+    Full::new(chunk.into())
+        .map_err(|never| match never {})
+        .boxed()
+}
+
+
+#[derive(Debug, Clone)]
+pub struct Svc {
     tx_cfg: sync::broadcast::Sender<Message>,
-) -> Result<Response<Body>, Infallible> {
-    let mut response = Response::new(Body::empty());
-    let method = Method::to_owned(req.method());
-    let uri = req.uri().clone();
+}
 
-    match (&method, uri.path()) {
-        (&Method::POST, "/set_config") => {
-            let bytes = hyper::body::to_bytes(req.into_body()).await.unwrap();
-            let json_str = String::from_utf8(bytes.into_iter().collect()).expect("");
+fn mk_response(status: StatusCode, s: String) -> Result<Response<BoxBody<Bytes, hyper::Error>>, hyper::Error> {
+    Ok(Response::builder()
+        .status(status)
+        .body(full(s))
+        .unwrap())
+}
 
-            *response.status_mut() = match json::parse(&json_str) {
-                Ok(json_val) => match json_val {
-                    JsonValue::Object(json_obj) => match tx_cfg.send(Message::Config(json_obj)) {
-                        Ok(_) => StatusCode::OK,
-                        Err(why) => {
-                            print!("Failed to send config: {why}\n");
-                            StatusCode::INTERNAL_SERVER_ERROR
-                        }
-                    },
-                    _ => {
-                        println!("JSON is not an object");
-                        StatusCode::BAD_REQUEST
+fn mk_status(status: StatusCode) -> Result<Response<BoxBody<Bytes, hyper::Error>>, hyper::Error> {
+    Ok(Response::builder()
+        .status(status)
+        .body(empty())
+        .unwrap())
+}
+
+impl Svc {
+    // Note that these are not methods that consume &self since that introduces
+    // lifetime issues for the future (?).
+    async fn set_config(req: Request<Incoming>, tx_cfg: sync::broadcast::Sender<Message>) -> Result<Response<BoxBody<Bytes, hyper::Error>>, hyper::Error> {
+        let bytes = req.into_body().collect().await.unwrap().to_bytes();
+        let json_str = String::from_utf8(bytes.into_iter().collect()).expect("");
+
+        match json::parse(&json_str) {
+            Ok(json_val) => match json_val {
+                JsonValue::Object(json_obj) => match tx_cfg.send(Message::Config(json_obj)) {
+                    Ok(_) => mk_status(StatusCode::OK),
+                    Err(why) => {
+                        print!("Failed to send config: {why}\n");
+                        mk_status(StatusCode::INTERNAL_SERVER_ERROR)
                     }
                 },
-                Err(why) => {
-                    print!("JSON parse failure: {why}\n");
-                    StatusCode::BAD_REQUEST
+                _ => {
+                    println!("JSON is not an object");
+                    mk_status(StatusCode::BAD_REQUEST)
                 }
-            };
-        }
-        (&Method::POST, "/set_scalar") => {
-            let bytes = hyper::body::to_bytes(req.into_body()).await.unwrap();
-            let json_str = String::from_utf8(bytes.into_iter().collect()).expect("");
-
-            *response.status_mut() = match json::parse(&json_str) {
-                Ok(data) => match data {
-                    JsonValue::Object(data) => {
-                        // TODO: this error handling is lazy
-                        let index = data.get("index").unwrap().as_usize().unwrap();
-                        let value = data.get("value").unwrap().as_f32().unwrap();
-
-                        match tx_cfg.send(Message::SetScalar(VarMsg::<f32> { index, value })) {
-                            Ok(_) => StatusCode::OK,
-                            Err(why) => {
-                                print!("Failed to send scalar: {why}\n");
-                                StatusCode::INTERNAL_SERVER_ERROR
-                            }
-                        }
-                    }
-                    _ => {
-                        println!("JSON is not an object");
-                        StatusCode::BAD_REQUEST
-                    }
-                },
-                Err(why) => {
-                    print!("JSON parse failure: {why}\n");
-                    StatusCode::BAD_REQUEST
-                }
+            },
+            Err(why) => {
+                print!("JSON parse failure: {why}\n");
+                mk_status(StatusCode::BAD_REQUEST)
             }
-        }
-        _ => {
-            *response.status_mut() = StatusCode::NOT_FOUND;
         }
     }
 
-    //println!("{} {} -> {}", method, uri.path(), response.status());
-    Ok(response)
+    async fn set_scalar(req: Request<Incoming>, tx_cfg: sync::broadcast::Sender<Message>) -> Result<Response<BoxBody<Bytes, hyper::Error>>, hyper::Error> {
+        let bytes = req.into_body().collect().await.unwrap().to_bytes();
+        let json_str = String::from_utf8(bytes.into_iter().collect()).expect("");
+        
+        match json::parse(&json_str) {
+            Ok(data) => match data {
+                JsonValue::Object(data) => {
+                    // TODO: this error handling is lazy
+                    let index = data.get("index").unwrap().as_usize().unwrap();
+                    let value = data.get("value").unwrap().as_f32().unwrap();
+
+                    match tx_cfg.send(Message::SetScalar(VarMsg::<f32> { index, value })) {
+                        Ok(_) => mk_status(StatusCode::OK),
+                        Err(why) => {
+                            print!("Failed to send scalar: {why}\n");
+                            mk_status(StatusCode::INTERNAL_SERVER_ERROR)
+                        }
+                    }
+                }
+                _ => {
+                    println!("JSON is not an object");
+                    mk_status(StatusCode::BAD_REQUEST)
+                }
+            },
+            Err(why) => {
+                print!("JSON parse failure: {why}\n");
+                mk_status(StatusCode::BAD_REQUEST)
+            }
+        }
+    }
 }
 
-pub async fn server_setup(tx_cfg: sync::broadcast::Sender<Message>) {
+impl Service<Request<Incoming>> for Svc {
+    type Response = Response<BoxBody<Bytes, hyper::Error>>;
+    type Error = hyper::Error;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
+
+    fn call(&self, req: Request<Incoming>) -> Self::Future {
+        match (req.method(), req.uri().path()) {
+            // This was really hard to get compiling. I still don't know if it's right.
+            // Between opaque types (impl Future) not matching between match branches
+            // and lifetimes issues of &self, this took nearly all day.
+            (&Method::POST, "/set_config") => {
+                return Box::pin(Self::set_config(req, self.tx_cfg.clone()))
+            }
+            (&Method::POST, "/set_scalar") => {
+                return Box::pin(Self::set_scalar(req, self.tx_cfg.clone()))
+            }
+            _ => {
+                return Box::pin(async {mk_status(StatusCode::NOT_FOUND)})
+            }
+        };
+    }
+}
+
+pub async fn server_run(tx_cfg: sync::broadcast::Sender<Message>) {
     /* HTTP Server initialization */
 
     // We'll bind to 127.0.0.1:3000
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
-
-    // A `Service` is needed for every connection, so this
-    // creates one from our `endpoint_impl` function.
-    let make_svc = make_service_fn(move |conn: &hyper::server::conn::AddrStream| {
-        // Clone the broadcast sender before we create the service function itself.
-        let tx_cfg = tx_cfg.clone();
-        let remote = conn.remote_addr();
-        print!("Got connection from {remote}\n");
-
-        // This is the actual service function, which will reference a cloned tx_cfg.
-        async move {
-            // service_fn converts our function into a `Service`
-            Ok::<_, Infallible>(service_fn(move |req| endpoint_impl(req, tx_cfg.clone())))
-        }
-    });
-
-    let server = Server::bind(&addr).serve(make_svc);
-
+    let listener = TcpListener::bind(addr).await.unwrap();
+    
     print!("Server listening on {addr}\n");
-
-    if let Err(e) = server.await {
-        panic!("Server error: {}", e);
-    }
-
-    print!("Server terminated, should never get here");
+    
+    // We start a loop to continuously accept incoming connections
+    loop {
+        let (stream, _) = listener.accept().await.unwrap();
+        
+        // Use an adapter to access something implementing `tokio::io` traits as if they implement
+        // `hyper::rt` IO traits.
+        let io = TokioIo::new(stream);
+        let lcl_tx_cfg = tx_cfg.clone();
+        
+        // Spawn a tokio task to serve multiple connections concurrently
+        tokio::task::spawn(async move {
+            // Finally, we bind the incoming connection to our `hello` service
+            let svc = Svc {tx_cfg: lcl_tx_cfg};
+            if let Err(err) = auto::Builder::new(TokioExecutor::new())
+                .serve_connection(io, svc)
+                .await
+            {
+                println!("Error serving connection: {:?}", err);
+            }
+        });
+    }    
 }
