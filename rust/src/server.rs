@@ -163,6 +163,8 @@ impl Service<Request<Incoming>> for Svc {
             // This was really hard to get compiling. I still don't know if it's right.
             // Between opaque types (impl Future) not matching between match branches
             // and lifetimes issues of &self, this took nearly all day.
+            // TODO: look at BoxFuture and explicitly define the lifetime of the future
+            // as the lifetime of the server (or the lifetime of tx_cfg?)
             (&Method::POST, "/set_config") => {
                 return Box::pin(Self::set_config(req, self.tx_cfg.clone()))
             }
