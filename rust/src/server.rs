@@ -23,6 +23,7 @@ use hyper_util::{
     rt::TokioIo,
     server::conn::auto,
 };
+use base64::prelude::*;
 
 use crate::msg::{Message, VarMsg};
 
@@ -118,6 +119,38 @@ impl Svc {
             }
         }
     }
+
+    async fn set_data(req: Request<Incoming>, tx_cfg: sync::broadcast::Sender<Message>) -> Result<Response<BoxBody<Bytes, hyper::Error>>, hyper::Error> {
+        let bytes = req.into_body().collect().await.unwrap().to_bytes();
+        let json_str = String::from_utf8(bytes.into_iter().collect()).expect("");
+        
+        match json::parse(&json_str) {
+            Ok(data) => match data {
+                JsonValue::Object(data) => {
+                    // TODO: this error handling is lazy
+                    let index = data.get("index").unwrap().as_usize().unwrap();
+                    let b64_str = data.get("value").unwrap().as_str().unwrap();
+                    let value = BASE64_STANDARD.decode(b64_str).unwrap();
+
+                    match tx_cfg.send(Message::SetData(VarMsg::<Vec<u8>> { index, value })) {
+                        Ok(_) => mk_status(StatusCode::OK),
+                        Err(why) => {
+                            print!("Failed to send scalar: {why}\n");
+                            mk_status(StatusCode::INTERNAL_SERVER_ERROR)
+                        }
+                    }
+                }
+                _ => {
+                    println!("JSON is not an object");
+                    mk_status(StatusCode::BAD_REQUEST)
+                }
+            },
+            Err(why) => {
+                print!("JSON parse failure: {why}\n");
+                mk_status(StatusCode::BAD_REQUEST)
+            }
+        }
+    }
 }
 
 impl Service<Request<Incoming>> for Svc {
@@ -135,6 +168,9 @@ impl Service<Request<Incoming>> for Svc {
             }
             (&Method::POST, "/set_scalar") => {
                 return Box::pin(Self::set_scalar(req, self.tx_cfg.clone()))
+            }
+            (&Method::POST, "/set_data") => {
+                return Box::pin(Self::set_data(req, self.tx_cfg.clone()))
             }
             _ => {
                 return Box::pin(async {mk_status(StatusCode::NOT_FOUND)})

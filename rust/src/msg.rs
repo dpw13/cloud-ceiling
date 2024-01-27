@@ -15,4 +15,5 @@ pub enum Message {
     SetPosition(VarMsg<var_types::Position>),
     SetColor(VarMsg<var_types::Color>),
     SetRColor(VarMsg<var_types::RealColor>),
+    SetData(VarMsg<Vec<u8>>),
 }

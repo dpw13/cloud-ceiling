@@ -67,6 +67,7 @@ pub fn fb_main(args: &Args, mut rx_cfg: sync::broadcast::Receiver<Message>) {
                 Message::SetPosition(v) => state.set_position(v.index, v.value),
                 Message::SetColor(v) => state.set_color(v.index, v.value),
                 Message::SetRColor(v) => state.set_rcolor(v.index, v.value),
+                Message::SetData(v) => state.set_data(v.index, v.value),
             }
         }
 
