@@ -2,8 +2,6 @@ use std::thread::sleep;
 use std::time::{Duration, Instant};
 use std::vec::Vec;
 
-use magick_rust::magick_wand_genesis;
-
 use tokio::sync;
 
 use json::JsonValue;
@@ -40,9 +38,6 @@ fn update_cfg(
 
 pub fn fb_main(args: &Args, mut rx_cfg: sync::broadcast::Receiver<Message>) {
     /* Framebuffer initialization */
-    // Initialize magick-wand
-    magick_wand_genesis();
-
     let disp = LedDisplay::new();
     let id = disp.read_id();
 
@@ -104,7 +99,7 @@ pub fn fb_main(args: &Args, mut rx_cfg: sync::broadcast::Receiver<Message>) {
 
     println!(
         "{} frames in {:?}. Spent {:?} in flush.",
-        args.frame_cnt,
+        frame,
         now.elapsed(),
         disp.wait_time.get()
     );

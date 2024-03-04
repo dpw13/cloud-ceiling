@@ -3,7 +3,13 @@ name = "cloud_ceiling"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name = "cloud_ceiling"
+path = "src/main.rs"
+
+[[bin]]
+name = "movie_ceiling"
+path = "src/thin_main.rs"
 
 # Don't forget to 
 # export PKG_CONFIG_SYSROOT_DIR=/home/dwagner/Documents/sysroots/beaglebone
@@ -18,7 +24,6 @@ hyper = { version = "1.1.0", features = ["full"] }
 hyper-util = { version = "0.1.2", features = ["full"] }
 interpolation = "0.3.0"
 json = "0.12.4"
-magick_rust = "0.19.1"
 memmap = "0.7.0"
 nix = { version = "0.27.1", features = ["ioctl"], default-features = false }
 num-traits = "0.2.17"

@@ -36,3 +36,11 @@ pub fn fb_idx(x: usize, y: usize) -> usize {
 
     fb_idx
 }
+
+pub fn px_idx(x: usize, y: usize) -> usize {
+    (y + x * STRING_COUNT) * BYTES_PER_LED
+}
+
+pub fn px_idx_tpose(x: usize, y: usize) -> usize {
+    (x + y * LED_COUNT) * BYTES_PER_LED
+}

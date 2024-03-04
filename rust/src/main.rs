@@ -13,7 +13,6 @@ use fb::fb_main;
 use msg::Message;
 use server::server_run;
 
-mod animations;
 mod args;
 mod blocks;
 mod constants;
