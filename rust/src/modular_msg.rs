@@ -8,7 +8,7 @@ pub struct VarMsg<T> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Message {
+pub enum ModularMessage {
     Config(json::object::Object),
 
     SetScalar(VarMsg<f32>),
@@ -26,35 +26,35 @@ pub enum Message {
  * of Message is added.
  */
 pub trait Settable {
-    fn into_message(index: usize, value: Self) -> Message;
+    fn into_message(index: usize, value: Self) -> ModularMessage;
 }
 
 impl Settable for f32 {
-    fn into_message(index: usize, value: Self) -> Message {
-        Message::SetScalar(VarMsg::<Self> {index, value})
+    fn into_message(index: usize, value: Self) -> ModularMessage {
+        ModularMessage::SetScalar(VarMsg::<Self> {index, value})
     }
 }
 
 impl Settable for var_types::Position {
-    fn into_message(index: usize, value: Self) -> Message {
-        Message::SetPosition(VarMsg::<Self> {index, value})
+    fn into_message(index: usize, value: Self) -> ModularMessage {
+        ModularMessage::SetPosition(VarMsg::<Self> {index, value})
     }
 }
 
 impl Settable for var_types::Color {
-    fn into_message(index: usize, value: Self) -> Message {
-        Message::SetColor(VarMsg::<Self> {index, value})
+    fn into_message(index: usize, value: Self) -> ModularMessage {
+        ModularMessage::SetColor(VarMsg::<Self> {index, value})
     }
 }
 
 impl Settable for var_types::RealColor {
-    fn into_message(index: usize, value: Self) -> Message {
-        Message::SetRColor(VarMsg::<Self> {index, value})
+    fn into_message(index: usize, value: Self) -> ModularMessage {
+        ModularMessage::SetRColor(VarMsg::<Self> {index, value})
     }
 }
 
 impl Settable for var_types::Data {
-    fn into_message(index: usize, value: Self) -> Message {
-        Message::SetData(VarMsg::<Self> {index, value})
+    fn into_message(index: usize, value: Self) -> ModularMessage {
+        ModularMessage::SetData(VarMsg::<Self> {index, value})
     }
 }

@@ -2,14 +2,15 @@
 
 use tokio::sync;
 
-use thin::thin_main;
+use movie_ctrl::movie_main;
 use server::server_run;
 
 mod constants;
 mod display;
-mod msg;
+mod led_msg;
+mod modular_msg;
 mod server;
-mod thin;
+mod movie_ctrl;
 mod var_types;
 
 fn main() {
@@ -20,9 +21,9 @@ fn main() {
         .unwrap();
 
     // Create the broadcast channel
-    let (tx_cfg, rx_cfg) = sync::broadcast::channel(16);
-    let server_tx_cfg = tx_cfg.clone();
+    let (mod_cmd, mod_rx) = sync::broadcast::channel(16);
+    let (led_cmd, led_rx) = sync::broadcast::channel(16);
 
-    rt.spawn(server_run(server_tx_cfg));
-    rt.block_on(thin_main(rx_cfg));
+    rt.spawn(server_run(mod_cmd, led_cmd));
+    rt.block_on(movie_main(mod_rx));
 }

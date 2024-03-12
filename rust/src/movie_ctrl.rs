@@ -5,9 +5,9 @@ use tokio::sync;
 
 use crate::constants;
 use crate::display::LedDisplay;
-use crate::msg::Message;
+use crate::modular_msg::ModularMessage;
 
-pub async fn thin_main(mut rx_cfg: sync::broadcast::Receiver<Message>) {
+pub async fn movie_main(mut rx_cfg: sync::broadcast::Receiver<ModularMessage>) {
     /* Framebuffer initialization */
 
     let disp = LedDisplay::new();
@@ -25,7 +25,7 @@ pub async fn thin_main(mut rx_cfg: sync::broadcast::Receiver<Message>) {
     // Blocking wait to receive new message
     while let Ok(msg) = rx_cfg.recv().await {
         match msg {
-            Message::SetData(buf) => {
+            ModularMessage::SetData(buf) => {
                 // Swizzle image
                 for x in 0..constants::LED_COUNT {
                     for y in 0..constants::STRING_COUNT {

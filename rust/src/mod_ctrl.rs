@@ -10,7 +10,7 @@ use crate::args::Args;
 use crate::blocks::block_factory;
 use crate::constants;
 use crate::display::LedDisplay;
-use crate::msg::Message;
+use crate::modular_msg::ModularMessage;
 use crate::render_block::{RenderBlock, RenderState};
 
 fn update_cfg(
@@ -36,7 +36,7 @@ fn update_cfg(
     println!("Config updated");
 }
 
-pub fn fb_main(args: &Args, mut rx_cfg: sync::broadcast::Receiver<Message>) {
+pub fn fb_main(args: &Args, mut rx_cfg: sync::broadcast::Receiver<ModularMessage>) {
     /* Framebuffer initialization */
     let disp = LedDisplay::new();
     let id = disp.read_id();
@@ -58,12 +58,12 @@ pub fn fb_main(args: &Args, mut rx_cfg: sync::broadcast::Receiver<Message>) {
         while let Ok(msg) = rx_cfg.try_recv() {
             //println!("Received {:?}", msg);
             match msg {
-                Message::Config(json_obj) => update_cfg(json_obj, &mut state, &mut blocks),
-                Message::SetScalar(v) => state.set_scalar(v.index, v.value),
-                Message::SetPosition(v) => state.set_position(v.index, v.value),
-                Message::SetColor(v) => state.set_color(v.index, v.value),
-                Message::SetRColor(v) => state.set_rcolor(v.index, v.value),
-                Message::SetData(v) => state.set_data(v.index, v.value),
+                ModularMessage::Config(json_obj) => update_cfg(json_obj, &mut state, &mut blocks),
+                ModularMessage::SetScalar(v) => state.set_scalar(v.index, v.value),
+                ModularMessage::SetPosition(v) => state.set_position(v.index, v.value),
+                ModularMessage::SetColor(v) => state.set_color(v.index, v.value),
+                ModularMessage::SetRColor(v) => state.set_rcolor(v.index, v.value),
+                ModularMessage::SetData(v) => state.set_data(v.index, v.value),
             }
         }
 

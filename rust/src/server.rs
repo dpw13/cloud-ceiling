@@ -26,7 +26,8 @@ use hyper_util::{
     server::conn::auto,
 };
 
-use crate::msg::{Message, Settable};
+use crate::modular_msg::{ModularMessage, Settable};
+use crate::led_msg::LedMessage;
 use crate::var_types::*;
 
 // We create some utility functions to make Empty and Full bodies
@@ -45,7 +46,8 @@ fn full<T: Into<Bytes>>(chunk: T) -> BoxBody<Bytes, hyper::Error> {
 
 #[derive(Debug, Clone)]
 pub struct Svc {
-    tx_cfg: Arc<Sender<Message>>,
+    led_cmd: Arc<Sender<LedMessage>>,
+    mod_cmd: Arc<Sender<ModularMessage>>,
 }
 
 fn mk_response(status: StatusCode, s: String) -> Result<Response<BoxBody<Bytes, hyper::Error>>, hyper::Error> {
@@ -91,9 +93,9 @@ impl Svc {
     }
 
     /* Parses the full config and passes it to the render block */
-    async fn set_config(req: Request<Incoming>, tx_cfg: Arc<Sender<Message>>) -> Result<Response<BoxBody<Bytes, hyper::Error>>, hyper::Error> {
+    async fn set_config(req: Request<Incoming>, mod_cmd: Arc<Sender<ModularMessage>>) -> Result<Response<BoxBody<Bytes, hyper::Error>>, hyper::Error> {
         Self::set_generic(req, |json_obj| {
-            match tx_cfg.send(Message::Config(json_obj)) {
+            match mod_cmd.send(ModularMessage::Config(json_obj)) {
                 Ok(_) => mk_status(StatusCode::OK),
                 Err(why) => {
                     println!("Failed to send config: {why}");
@@ -127,12 +129,50 @@ impl Svc {
 
     /* Uses the FromJson trait to parse the value and the Settable trait to generate
      * the proper message variant, then sends it. */
-    async fn set_object<T: FromJson + Settable>(req: Request<Incoming>, tx_cfg: Arc<Sender<Message>>) -> Result<Response<BoxBody<Bytes, hyper::Error>>, hyper::Error> {
+    async fn set_object<T: FromJson + Settable>(req: Request<Incoming>, mod_cmd: Arc<Sender<ModularMessage>>) -> Result<Response<BoxBody<Bytes, hyper::Error>>, hyper::Error> {
         Self::set_value(req, |index, obj| {
             let value = T::from_obj(obj);
             //println!("Set {} idx {index}", std::any::type_name::<T>());
-            tx_cfg.send(T::into_message(index, value))
+            mod_cmd.send(T::into_message(index, value))
         }).await
+    }
+
+    async fn set_white_led(req: Request<Incoming>, led_cmd: Arc<Sender<LedMessage>>) -> Result<Response<BoxBody<Bytes, hyper::Error>>, hyper::Error> {
+        let bytes = req.into_body().collect().await.unwrap().to_bytes();
+        let json_str = String::from_utf8(bytes.into_iter().collect()).expect("");
+
+        match json::parse(&json_str) {
+            Ok(data) => match data {
+                JsonValue::Object(data) => {
+                    let temp = data
+                        .get("temp").unwrap_or(&JsonValue::from(2700.0))
+                        .as_f32().expect("Temp parameter must be a float");
+                    let value = data
+                        .get("value").unwrap_or(&JsonValue::from(1.0))
+                        .as_f32().expect("Value parameter must be a float");
+                    let delay = data
+                        .get("delay").unwrap_or(&JsonValue::from(0.0))
+                        .as_f32().expect("Delay parameter must be a float");
+                    match led_cmd.send(LedMessage::SetWhiteTemp(temp, value, delay)) {
+                        Ok(_) => {
+                            mk_status(StatusCode::OK)
+                        },
+                        Err(why) => {
+                            println!("Failed to send LED command: {why}");
+                            mk_status(StatusCode::INTERNAL_SERVER_ERROR)
+                        }
+                    }
+                }
+                _ => {
+                    println!("JSON is not an object");
+                    mk_status(StatusCode::BAD_REQUEST)
+                }
+            },
+            Err(why) => {
+                println!("JSON parse failure: {why}");
+                mk_status(StatusCode::BAD_REQUEST)
+            }
+        }
     }
 }
 
@@ -148,24 +188,27 @@ impl Service<Request<Incoming>> for Svc {
             // Between opaque types (impl Future) not matching between match branches
             // and lifetimes issues of &self, this took nearly all day.
             // TODO: look at BoxFuture and explicitly define the lifetime of the future
-            // as the lifetime of the server (or the lifetime of tx_cfg?)
+            // as the lifetime of the server (or the lifetime of mod_cmd?)
             (&Method::POST, "/set_config") => {
-                return Box::pin(Self::set_config(req, self.tx_cfg.clone()))
+                return Box::pin(Self::set_config(req, self.mod_cmd.clone()))
             }
             (&Method::POST, "/set_scalar") => {
-                return Box::pin(Self::set_object::<f32>(req, self.tx_cfg.clone()))
+                return Box::pin(Self::set_object::<f32>(req, self.mod_cmd.clone()))
             }
             (&Method::POST, "/set_position") => {
-                return Box::pin(Self::set_object::<Position>(req, self.tx_cfg.clone()))
+                return Box::pin(Self::set_object::<Position>(req, self.mod_cmd.clone()))
             }
             (&Method::POST, "/set_color") => {
-                return Box::pin(Self::set_object::<Color>(req, self.tx_cfg.clone()))
+                return Box::pin(Self::set_object::<Color>(req, self.mod_cmd.clone()))
             }
             (&Method::POST, "/set_rcolor") => {
-                return Box::pin(Self::set_object::<RealColor>(req, self.tx_cfg.clone()))
+                return Box::pin(Self::set_object::<RealColor>(req, self.mod_cmd.clone()))
             }
             (&Method::POST, "/set_data") => {
-                return Box::pin(Self::set_object::<Data>(req, self.tx_cfg.clone()))
+                return Box::pin(Self::set_object::<Data>(req, self.mod_cmd.clone()))
+            }
+            (&Method::POST, "/set_white_led") => {
+                return Box::pin(Self::set_white_led(req, self.led_cmd.clone()))
             }
             _ => {
                 return Box::pin(async {mk_status(StatusCode::NOT_FOUND)})
@@ -174,7 +217,7 @@ impl Service<Request<Incoming>> for Svc {
     }
 }
 
-pub async fn server_run(tx_cfg: Sender<Message>) {
+pub async fn server_run(mod_cmd: Sender<ModularMessage>, led_cmd: Sender<LedMessage>) {
     /* HTTP Server initialization */
 
     // We'll bind to 127.0.0.1:3000
@@ -182,7 +225,9 @@ pub async fn server_run(tx_cfg: Sender<Message>) {
     let listener = TcpListener::bind(addr).await.unwrap();
 
     println!("Server listening on {addr}");
-    let svc = Svc {tx_cfg: Arc::new(tx_cfg)};
+    let svc = Svc {
+        led_cmd: Arc::new(led_cmd),
+        mod_cmd: Arc::new(mod_cmd)};
 
     // We start a loop to continuously accept incoming connections
     loop {

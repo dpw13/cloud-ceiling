@@ -9,16 +9,17 @@ use clap::Parser;
 use json::JsonValue;
 
 use args::Args;
-use fb::fb_main;
-use msg::Message;
+use mod_ctrl::fb_main;
+use modular_msg::ModularMessage;
 use server::server_run;
 
 mod args;
 mod blocks;
 mod constants;
 mod display;
-mod fb;
-mod msg;
+mod led_msg;
+mod mod_ctrl;
+mod modular_msg;
 mod render_block;
 mod server;
 mod var_types;
@@ -55,15 +56,16 @@ fn main() {
         .unwrap();
 
     // Create the broadcast channel
-    let (tx_cfg, rx_cfg) = sync::broadcast::channel(16);
-    let server_tx_cfg = tx_cfg.clone();
+    let (led_cmd, led_rx) = sync::broadcast::channel(16);
+    let (mod_cmd, mod_rx) = sync::broadcast::channel(16);
+    let server_mod_cmd = mod_cmd.clone();
 
     let cfg = init_config(&args);
 
-    if let Err(e) = tx_cfg.send(Message::Config(cfg)) {
+    if let Err(e) = mod_cmd.send(ModularMessage::Config(cfg)) {
         print!("Error sending new config: {e}\n");
     }
 
-    rt.spawn(server_run(server_tx_cfg));
-    rt.block_on(async move { fb_main(&args, rx_cfg) });
+    rt.spawn(server_run(server_mod_cmd, led_cmd));
+    rt.block_on(async move { fb_main(&args, mod_rx) });
 }

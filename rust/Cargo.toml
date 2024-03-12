@@ -5,11 +5,11 @@ edition = "2021"
 
 [[bin]]
 name = "cloud_ceiling"
-path = "src/main.rs"
+path = "src/modular.rs"
 
 [[bin]]
 name = "movie_ceiling"
-path = "src/thin_main.rs"
+path = "src/movie.rs"
 
 # Don't forget to 
 # export PKG_CONFIG_SYSROOT_DIR=/home/dwagner/Documents/sysroots/beaglebone
