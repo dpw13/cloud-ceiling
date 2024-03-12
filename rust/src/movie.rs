@@ -2,11 +2,13 @@
 
 use tokio::sync;
 
+use led_ctrl::led_main;
 use movie_ctrl::movie_main;
 use server::server_run;
 
 mod constants;
 mod display;
+mod led_ctrl;
 mod led_msg;
 mod modular_msg;
 mod server;
@@ -25,5 +27,6 @@ fn main() {
     let (led_cmd, led_rx) = sync::broadcast::channel(16);
 
     rt.spawn(server_run(mod_cmd, led_cmd));
+    rt.spawn(led_main(led_rx));
     rt.block_on(movie_main(mod_rx));
 }

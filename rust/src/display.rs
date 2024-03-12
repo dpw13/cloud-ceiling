@@ -4,7 +4,7 @@ use std::cell::{Cell, RefCell, RefMut};
 use std::fs;
 use std::fs::File;
 use std::os::fd::AsRawFd;
-use std::ptr::read_volatile;
+use std::ptr::{read_volatile, write_volatile};
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 
@@ -20,8 +20,11 @@ pub struct LedRegs {
     mmap_regs: RefCell<MmapMut>,
 
     /* The actual memory-mapped registers as u16 */
-    regs: *mut FpgaRegisters,
+    pub regs: *mut FpgaRegisters,
 }
+
+unsafe impl Send for LedRegs {}
+unsafe impl Sync for LedRegs {}
 
 pub struct LedFramebuffer {
     /* The ledfb device file used for ioctl */
@@ -82,6 +85,18 @@ impl LedRegs {
 
     pub fn empty_count(&self) -> usize {
         unsafe { read_volatile(&(*self.regs).empty_count) as usize }
+    }
+
+    pub fn set_white_led(&self, cold: u8, cool: u8, hot: u8) -> () {
+        let value = (cold as u32) << 8 | (cool as u32) | (hot as u32) << 16;
+        unsafe { write_volatile(&mut (*self.regs).white_led, value) }
+    }
+
+    pub fn set_white_led_f32(&self, cold: f32, cool: f32, hot: f32) -> () {
+        let x = (cold * 255.0).round().clamp(0.0, 255.0) as u8;
+        let y = (cool * 255.0).round().clamp(0.0, 255.0) as u8;
+        let z = (hot * 255.0).round().clamp(0.0, 255.0) as u8;
+        self.set_white_led(x, y, z)
     }
 }
 

@@ -9,6 +9,7 @@ use clap::Parser;
 use json::JsonValue;
 
 use args::Args;
+use led_ctrl::led_main;
 use mod_ctrl::fb_main;
 use modular_msg::ModularMessage;
 use server::server_run;
@@ -17,6 +18,7 @@ mod args;
 mod blocks;
 mod constants;
 mod display;
+mod led_ctrl;
 mod led_msg;
 mod mod_ctrl;
 mod modular_msg;
@@ -67,5 +69,6 @@ fn main() {
     }
 
     rt.spawn(server_run(server_mod_cmd, led_cmd));
+    rt.spawn(led_main(led_rx));
     rt.block_on(async move { fb_main(&args, mod_rx) });
 }
