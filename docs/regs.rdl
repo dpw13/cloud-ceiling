@@ -81,7 +81,7 @@ addrmap cloud_ceiling_regmap {
                 desc = "White Value";
                 swmod;
             } VALUE[15:0] = 0x0818;
-        } WHITE_COLOR_L_REG @ 0x14;
+        } WHITE_COLOR_L_REG @ 0x20;
 
         reg {
             name = "White Color";
@@ -90,7 +90,7 @@ addrmap cloud_ceiling_regmap {
                 desc = "White Value";
                 swmod;
             } VALUE[7:0] = 0x40;
-        } WHITE_COLOR_H_REG @ 0x16;
+        } WHITE_COLOR_H_REG @ 0x22;
         // Register arrays appear to break synlog
     } REGS @ 0x0;
 
