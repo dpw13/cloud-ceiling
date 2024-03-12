@@ -33,7 +33,7 @@ fn update_cfg(
         blocks.push(block_factory(b));
     }
 
-    print!("Config updated\n");
+    println!("Config updated");
 }
 
 pub fn fb_main(args: &Args, mut rx_cfg: sync::broadcast::Receiver<Message>) {
@@ -56,6 +56,7 @@ pub fn fb_main(args: &Args, mut rx_cfg: sync::broadcast::Receiver<Message>) {
     while args.frame_cnt == 0 || frame < args.frame_cnt {
         // Update config if there's anything new
         while let Ok(msg) = rx_cfg.try_recv() {
+            //println!("Received {:?}", msg);
             match msg {
                 Message::Config(json_obj) => update_cfg(json_obj, &mut state, &mut blocks),
                 Message::SetScalar(v) => state.set_scalar(v.index, v.value),

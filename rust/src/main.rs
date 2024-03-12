@@ -64,6 +64,6 @@ fn main() {
         print!("Error sending new config: {e}\n");
     }
 
-    rt.spawn(async move { server_run(server_tx_cfg) });
+    rt.spawn(server_run(server_tx_cfg));
     rt.block_on(async move { fb_main(&args, rx_cfg) });
 }

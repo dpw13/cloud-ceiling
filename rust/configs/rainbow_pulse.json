@@ -9,7 +9,8 @@
         ],
         "color": [{"r": 0, "g": 0, "b": 0}],
         "rcolor": [{"r": 0.2, "g": 0.2, "b": 0.2}],
-        "position": []
+        "position": [],
+	"data": []
     },
     "primitives": [
         {

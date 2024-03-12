@@ -1,0 +1,32 @@
+{
+    "vars": {
+        "float": [
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0, 0
+        ],
+        "color": [
+            {"r": 0, "g": 0, "b": 0}
+        ],
+        "rcolor": [],
+        "position": [],
+        "data": [""]
+    },
+    "primitives": [
+        {
+            "name": "image lookup",
+            "type": "image_lookup",
+            "inputs": {
+                "width": 4,
+                "height": 5,
+                "x": 1,
+                "y": 2,
+                "mode": 3,
+                "data": 0
+            },
+            "outputs": {
+                "o": 0
+            }
+        }
+    ]
+}

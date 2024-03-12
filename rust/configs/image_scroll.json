@@ -1,0 +1,56 @@
+{
+    "vars": {
+        "float": [
+            0, 0, 0,
+            0.04, 1, -0.1,
+            0.20, 0.2, 2.2,
+            0, 0,
+            0, 0, 0
+        ],
+        "color": [
+            {"r": 0, "g": 0, "b": 0}
+        ],
+        "rcolor": [],
+        "position": [],
+        "data": [""]
+    },
+    "primitives": [
+        {
+            "name": "scroller 1",
+            "type": "scalar_macc",
+            "inputs": {
+                "m": [3, 4, 5],
+                "x": [0, 1, 2]
+            },
+            "outputs": {
+                "o": 9
+            }
+        },
+        {
+            "name": "scroller 2",
+            "type": "scalar_macc",
+            "inputs": {
+                "m": [6, 7, 8],
+                "x": [0, 1, 2]
+            },
+            "outputs": {
+                "o": 10
+            }
+        },
+        {
+            "name": "image lookup",
+            "type": "image_lookup",
+            "inputs": {
+                "width": 11,
+                "height": 12,
+                "x": 9,
+                "y": 10,
+                "mode": 13,
+                "data": 0
+            },
+            "outputs": {
+                "o": 0
+            }
+        }
+    ]
+}

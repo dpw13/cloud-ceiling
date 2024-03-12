@@ -6,7 +6,7 @@ pub struct RenderState {
     positions: Vec<Position>,
     colors: Vec<Color>,
     rcolors: Vec<RealColor>,
-    data: Vec<Vec<u8>>,
+    data: Vec<Data>,
 }
 
 pub trait RenderBlock {
@@ -100,7 +100,7 @@ impl RenderState {
 
         let list = match dict
             .get("position")
-            .expect("Missing 'positions' initialization")
+            .expect("Missing 'position' initialization")
         {
             JsonValue::Array(x) => x,
             _ => panic!("Initialization for positions is not a list"),
@@ -110,7 +110,10 @@ impl RenderState {
             self.positions.push(Position::from_obj(o));
         }
 
-        let list = match dict.get("color").expect("Missing 'colors' initialization") {
+        let list = match dict
+            .get("color")
+            .expect("Missing 'color' initialization")
+        {
             JsonValue::Array(x) => x,
             _ => panic!("Initialization for colors is not a list"),
         };
@@ -121,7 +124,7 @@ impl RenderState {
 
         let list = match dict
             .get("rcolor")
-            .expect("Missing 'rcolors' initialization")
+            .expect("Missing 'rcolor' initialization")
         {
             JsonValue::Array(x) => x,
             _ => panic!("Initialization for rcolors is not a list"),
@@ -129,6 +132,18 @@ impl RenderState {
         self.rcolors.clear();
         for o in list {
             self.rcolors.push(RealColor::from_obj(o));
+        }
+
+        let list = match dict
+            .get("data")
+            .expect("Missing 'data' initialization")
+        {
+            JsonValue::Array(x) => x,
+            _ => panic!("Initialization for data is not a list"),
+        };
+        self.data.clear();
+        for o in list {
+            self.data.push(Data::from_obj(o));
         }
     }
 }

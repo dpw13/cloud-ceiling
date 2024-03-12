@@ -1,4 +1,6 @@
 use crate::render_block::{RenderBlock, RenderState};
+use crate::var_types::Color;
+
 use json::JsonValue;
 use num_traits::ToPrimitive;
 use num_enum::FromPrimitive;
@@ -15,9 +17,7 @@ pub struct ImageLookup {
     data_idx: usize,
 
     // Outputs
-    r_idx: usize,
-    g_idx: usize,
-    b_idx: usize,
+    o_idx: usize, // color
 }
 
 #[derive(Debug, Clone, PartialEq, FromPrimitive)]
@@ -73,21 +73,11 @@ impl ImageLookup {
             _ => panic!("Initialization for ImageLookup outputs is not an object"),
         };
 
-        let r_idx = output_obj
-            .get("r")
-            .expect("Missing r output")
+        let o_idx = output_obj
+            .get("o")
+            .expect("Missing o output")
             .as_usize()
-            .expect("Could not parse r output");
-        let g_idx = output_obj
-            .get("g")
-            .expect("Missing g output")
-            .as_usize()
-            .expect("Could not parse g output");
-        let b_idx = output_obj
-            .get("b")
-            .expect("Missing b output")
-            .as_usize()
-            .expect("Could not parse b output");
+            .expect("Could not parse o output");
 
         ImageLookup {
             width_idx,
@@ -96,9 +86,7 @@ impl ImageLookup {
             y_idx,
             mode_idx,
             data_idx,
-            r_idx,
-            g_idx,
-            b_idx,
+            o_idx,
         }
     }
 }
@@ -108,8 +96,8 @@ impl RenderBlock for ImageLookup {
         let width = state.get_scalar(self.width_idx).round().clamp(1.0, 1024.0);
         let height = state.get_scalar(self.height_idx).round().clamp(1.0, 1024.0);
 
-        let x = state.get_scalar(self.x_idx);
-        let y = state.get_scalar(self.y_idx);
+        let x = state.get_scalar(self.x_idx) * 1.0;
+        let y = state.get_scalar(self.y_idx) * 2.2;
 
         let data = state.get_data(self.data_idx);
 
@@ -135,17 +123,15 @@ impl RenderBlock for ImageLookup {
         let mut g = 0u8;
         let mut b = 0u8;
 
-        if i > 0 && j > 0 {
-            let idx : usize = 3*(i*(width as isize) + j) as usize;
+        if i >= 0 && j >= 0 {
+            let idx = 3*(i + j*(width as isize)) as usize;
             if idx + 2 < data.len() {
                 r = data[idx + 0];
                 g = data[idx + 1];
                 b = data[idx + 2];
             }
-        } 
+        }
 
-        state.set_scalar(self.r_idx, r as f32);
-        state.set_scalar(self.g_idx, g as f32);
-        state.set_scalar(self.b_idx, b as f32);
+        state.set_color(self.o_idx, Color {r, g, b});
     }
 }

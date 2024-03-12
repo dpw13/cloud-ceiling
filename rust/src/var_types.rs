@@ -1,6 +1,17 @@
 use json::JsonValue;
 use num_traits::clamp;
 use std::ops::{Add, Mul};
+use base64::prelude::*;
+
+pub trait FromJson {
+    fn from_obj(v: &JsonValue) -> Self;
+}
+
+impl FromJson for f32 {
+    fn from_obj(v: &JsonValue) -> Self {
+        v.as_f32().expect("Value must be a float")
+    }
+}
 
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
 pub struct Position {
@@ -8,8 +19,8 @@ pub struct Position {
     pub y: f32,
 }
 
-impl Position {
-    pub fn from_obj(v: &JsonValue) -> Position {
+impl FromJson for Position {
+    fn from_obj(v: &JsonValue) -> Self {
         let dict = match v {
             JsonValue::Object(ref x) => x,
             _ => panic!("Position is not an object"),
@@ -61,8 +72,8 @@ pub struct Color {
     pub b: u8,
 }
 
-impl Color {
-    pub fn from_obj(v: &JsonValue) -> Color {
+impl FromJson for Color {
+    fn from_obj(v: &JsonValue) -> Self {
         let dict = match v {
             JsonValue::Object(ref x) => x,
             _ => panic!("Color is not an object"),
@@ -135,8 +146,8 @@ pub struct RealColor {
     pub b: f32,
 }
 
-impl RealColor {
-    pub fn from_obj(v: &JsonValue) -> Self {
+impl FromJson for RealColor {
+    fn from_obj(v: &JsonValue) -> Self {
         let dict = match v {
             JsonValue::Object(ref x) => x,
             _ => panic!("RealColor is not an object"),
@@ -183,5 +194,22 @@ impl Mul<f32> for RealColor {
             g: clamp(other * self.g, 0.0, 1.0),
             b: clamp(other * self.b, 0.0, 1.0),
         }
+    }
+}
+
+pub type Data = Vec<u8>;
+
+impl FromJson for Data {
+    fn from_obj(v: &JsonValue) -> Self {
+        /*
+         * The documentation for JsonValue seems to indicate that
+         * as_str() will not return a value for anything but Short
+         * and String.
+         */
+        let b64_str = match v.as_str() {
+            Some(x) => x,
+            _ => panic!("Data is not a string: '{:?}'", v),
+        };
+        BASE64_STANDARD.decode(b64_str).expect("Failed to decode base64")
     }
 }

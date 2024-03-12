@@ -113,6 +113,8 @@ impl LedDisplay {
 
     pub fn flush(&self) -> () {
         let fd = self.f_fb.as_raw_fd();
+        // TODO: Remove me once FIFO overruns are resolved
+        sleep(Duration::from_millis(2));
 
         let now = Instant::now();
         while self.empty_count() < constants::FRAME_SIZE_WORDS {
