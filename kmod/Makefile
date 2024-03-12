@@ -1,6 +1,7 @@
 dtbo-y += \
 	dts/BB-BONE-eMMC1-DISABLE-01-00A0.dtbo \
 	dts/BB-HDMI-TDA998x-DISABLE-00A0.dtbo \
+	dts/BB-MCASP0-ENABLE-00A0.dtbo \
 	dts/BW-ICE40Cape-00A0.dtbo
 
 obj-m += led-driver.o
