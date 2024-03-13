@@ -23,11 +23,11 @@ parser.add_argument("-r", "--range", type=int, default=1)
 args = parser.parse_args()
 
 # Configure motion sensor
-ser = serial.Serial(args.port, 9600, 8, "N", 1)
-
-# See http://www.zilog.com/docs/ps0305.pdf
-motion.motion_write(ser, b"S", args.sensitivity.to_bytes(1))
-motion.motion_write(ser, b"R", args.range.to_bytes(1))
+with serial.Serial(args.port, 9600, 8, "N", 1) as ser:
+    # See http://www.zilog.com/docs/ps0305.pdf
+    motion.motion_write(ser, b"C", b"M")
+    motion.motion_write(ser, b"S", args.sensitivity.to_bytes(1))
+    motion.motion_write(ser, b"R", args.range.to_bytes(1))
 
 session = requests.Session()
 
@@ -44,6 +44,7 @@ with open(f"/sys/class/gpio/gpio{args.gpio}/value") as mdf:
         mdf.seek(0)
         val = int(mdf.read().strip())
         if val != start_val:
+            print(f"MD {val}")
             start_val = val
             # Set color
             session.post(LED_URI, json.dumps({
