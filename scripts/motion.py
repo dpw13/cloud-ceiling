@@ -1,3 +1,6 @@
+# Zilog motion detector UART control
+# See http://www.zilog.com/docs/ps0305.pdf
+
 import serial
 
 ACK = 0x06
