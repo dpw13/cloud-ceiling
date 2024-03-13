@@ -26,12 +26,14 @@ MCASP0
 	ACLKR
 		X GPMC_BE1N - GPIO1_28 (P9)
 		X MII...
-		LCD_DATA12 (P8)
+		LCD_DATA12 (P8_35)
 		X MCASP0_ACLKR - GPIO0_7/GPIO3_18 (P9)
+	FSX
+		LCD_DATA9 (P8_38)
 	FSR
 		X GPMC_CLK
 		X MII1...
-		LCD_DATA13 (P8)
+		X LCD_DATA13 (P8_33)
 		X MCASP0_FSR - GPIO3_19 (P9)
 	AXR0
 		X GPMC...
@@ -43,7 +45,7 @@ MCASP0
 		X GPMC_A11 (OE for HDMICLK, unusable)
 		X MII...
 		LCD_DATA14 (P8)
-		X MCASP_AHCLKX - GPIO3_21 (P9)
+		X MCASP_AHCLKX - GPIO3_21 (P9_25)
 		X MCASP0_AXR1 - GPIO3_20 (0 ohm to CLKOUT2) (P9)
 	AXR2
 		X MII...
@@ -53,14 +55,17 @@ MCASP0
 		X MCASP0_ACLKR - GPIO0_7/GPIO3_18 (P9)
 	AXR3
 		X MII...
-		X LCD_DATA13 (P8)
+		LCD_DATA13 (P8)
 		X LCD_DATA14 (P8)
 		X MCASP0_AHCLKR - SPI1_CS0 (P9)
-		MCASP0_FSR - GPIO3_19 (P9)
+		X MCASP0_FSR - GPIO3_19 (P9_27)
 
 	Can't get all 7 channels on LCD pins on P8, even w/o AHCLKR
 	SPI1 used for iCE40 flashing
 	Can't get all 7 channels on P9 either... Best bet is LCD on P8 + P3_19
+	Note that GPIO3_19/P9_27 is BB_IRQ_ARM_TO_FPGA which we don't use on the FPGA
+
+	LCD_DATA9 contains FSX though, we could use that instead of FSR...
 
 	ACLKR: 	P8_35
 	FSR: 	P8_33
@@ -71,12 +76,12 @@ MCASP0
 
 		*/
 		pinctrl-single,pins = <
+			AM33XX_PADCONF(AM335X_PIN_LCD_DATA9, PIN_OUTPUT_PULLDOWN, MUX_MODE3) /* lcd_data9.mcasp0_fsx */
 			AM33XX_PADCONF(AM335X_PIN_LCD_DATA10, PIN_INPUT_PULLUP, MUX_MODE3) /* lcd_data10.mcasp0_axr0 */
 			AM33XX_PADCONF(AM335X_PIN_LCD_DATA11, PIN_INPUT_PULLUP, MUX_MODE4) /* lcd_data11.mcasp0_axr2 */
 			AM33XX_PADCONF(AM335X_PIN_LCD_DATA12, PIN_OUTPUT_PULLDOWN, MUX_MODE3) /* lcd_data12.mcasp0_aclkr */
-			AM33XX_PADCONF(AM335X_PIN_LCD_DATA13, PIN_OUTPUT_PULLDOWN, MUX_MODE3) /* lcd_data13.mcasp0_fsr */
+			AM33XX_PADCONF(AM335X_PIN_LCD_DATA13, PIN_INPUT_PULLUP, MUX_MODE4) /* lcd_data13.mcasp0_axr3 */
 			AM33XX_PADCONF(AM335X_PIN_LCD_DATA14, PIN_INPUT_PULLUP, MUX_MODE3) /* lcd_data14.mcasp0_axr1 */
-			AM33XX_PADCONF(AM335X_PIN_MCASP0_FSR, PIN_INPUT_PULLUP, MUX_MODE2) /* mcasp0_fsr.mcasp0_axr3 */
 		>;
 	};
 };
