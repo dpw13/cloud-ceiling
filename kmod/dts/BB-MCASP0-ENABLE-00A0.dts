@@ -101,6 +101,20 @@ MCASP0
 };
 
 &ocp {
+	/* Use external clock as it can be divided into many more supported sample rates */
+	clk_mcasp0_fixed: clk_mcasp0_fixed {
+			#clock-cells = <0>;
+			compatible = "fixed-clock";
+			clock-frequency = <24576000>;
+	};
+
+	clk_mcasp0: clk_mcasp0 {
+			#clock-cells = <0>;
+			compatible = "gpio-gate-clock";
+			clocks = <&clk_mcasp0_fixed>;
+			enable-gpios = <&gpio1 27 0>; /* BeagleBone Black Clk enable on GPIO1_27 */
+	};
+
 	dummy_codec: spdif-receiver {
 		compatible = "linux,spdif-dir";
 		#sound-dai-cells = <0>;
@@ -119,8 +133,8 @@ MCASP0
 			sound-dai = <&mcasp0>;
 			system-clock-direction-out = <1>;
 			dai-tdm-slot-width = <32>;
-			/* Use internal functional clk for sysclk */
-			clocks = <&mcasp0_fck>;
+			/* Use external clk for sysclk */
+			clocks = <&clk_mcasp0>;
 		};
 
 		sound_master: simple-audio-card,codec {
