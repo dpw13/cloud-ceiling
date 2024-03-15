@@ -67,12 +67,12 @@ MCASP0
 
 	LCD_DATA9 contains FSX though, we could use that instead of FSR...
 
-	ACLKR: 	P8_35
-	FSR: 	P8_33
-	AXR0:	P8_36
-	AXR1:	P8_31
-	AXR2:	P8_34
-	AXR3:	P9_27
+	ACLKR: 	P8_35	Purple
+	FSX: 	P8_38	Grey
+	AXR0:	P8_36	Yellow
+	AXR1:	P8_31	Orange
+	AXR2:	P8_34	Blue
+	AXR3:	P8_33	Green
 
 		*/
 		pinctrl-single,pins = <
