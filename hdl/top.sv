@@ -24,7 +24,11 @@ module top#(
 
 	// LED string interface
 	output wire [22:0]  color_led_sdi,
-	output wire [3:0]  white_led_sdi
+	output wire [3:0]  white_led_sdi,
+
+	// Microphone LED control
+	output wire grove4_io0,
+	output wire grove4_io1
 );
 
 	import cloud_ceiling_regmap_pkg::*;
@@ -136,7 +140,7 @@ module top#(
 	assign hwif_in.FIFO_MEM.wr_ack = wr_ack;
 
 	logic white_value_valid;
-	logic [23:0] white_value_in; // Cold Red Warm
+	logic [23:0] white_value_in; // Cool Cold Warm
 
 	assign white_value_in = {
 		hwif_out.REGS.WHITE_COLOR_H_REG.VALUE.value,
@@ -240,5 +244,40 @@ module top#(
 		.string_active(led[3]),
 		.led_sdi(white_led_sdi)
 	);
+
+	localparam MIC_SERIAL_WIDTH = 32;
+	localparam MIC_SERIAL_PERIOD = 4;
+	logic mic_serial_word_valid;
+	logic [7:0] mic_serial_tick_count;
+	logic [31:0] mic_shreg;
+
+	always_ff @(posedge clk_100) begin
+		if(reset_100) begin
+			mic_serial_word_valid <= 1'b0;
+			mic_serial_tick_count <= 0;
+			mic_shreg <= 0;
+		end else begin
+			// swmod asserts before reg value is valid
+			mic_serial_word_valid <= hwif_out.REGS.MIC_WORD_H_REG.VALUE.swmod;
+			if (mic_serial_word_valid) begin
+				mic_serial_tick_count <= 8'hFF;
+				mic_shreg = { hwif_out.REGS.MIC_WORD_H_REG.VALUE.value, hwif_out.REGS.MIC_WORD_L_REG.VALUE.value };
+			end
+
+			if (mic_serial_tick_count > 0) begin
+				mic_serial_tick_count <= mic_serial_tick_count - 1;
+				// Shift up on falling edge of clock
+				if (mic_serial_tick_count[2:0] == 3'b000) begin
+					mic_shreg <= { mic_shreg[30:0], 1'b0 };
+				end
+			end
+
+		end
+	end
+
+	// Data
+	assign grove4_io0 = mic_shreg[31]; // MSB first
+	// Clock
+	assign grove4_io1 = ~mic_serial_tick_count[2];
 
 endmodule

@@ -94,4 +94,5 @@ set_io color_led_sdi[5] 41 # PMOD1 A2
 set_io color_led_sdi[6] 43 # PMOD1 A3
 set_io color_led_sdi[7] 45 # PMOD1 A4
 
-
+set_io grove4_io0 102
+set_io grove4_io1 104

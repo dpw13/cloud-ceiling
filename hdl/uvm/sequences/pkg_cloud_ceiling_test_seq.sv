@@ -48,6 +48,17 @@ package pkg_cloud_ceiling_test_seq;
             assert (status == UVM_IS_OK);
             assert (rdata == tmp);
 
+            /* Write microphone LED regs and make sure data gets sent. */
+            tmp = 32'h12345678;
+            regmodel.REGS.MIC_WORD_L_REG.write(status, tmp[15:0]);
+            regmodel.REGS.MIC_WORD_H_REG.write(status, tmp[31:16]);
+            assert (status == UVM_IS_OK);
+            #3us;
+            tmp = 32'hFEDCBA98;
+            regmodel.REGS.MIC_WORD_L_REG.write(status, tmp[15:0]);
+            regmodel.REGS.MIC_WORD_H_REG.write(status, tmp[31:16]);
+            assert (status == UVM_IS_OK);
+
             #500us;
 
             foreach (burst_bytes[i]) begin

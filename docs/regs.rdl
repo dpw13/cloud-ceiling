@@ -92,6 +92,22 @@ addrmap cloud_ceiling_regmap {
             } VALUE[7:0] = 0x40;
         } WHITE_COLOR_H_REG @ 0x22;
         // Register arrays appear to break synlog
+
+        reg {
+            name = "Microphone LED Word";
+            field {
+                desc = "Serial Word";
+                swmod;
+            } VALUE[15:0];
+        } MIC_WORD_L_REG @ 0x30;
+
+        reg {
+            name = "Microphone LED Word";
+            field {
+                desc = "Serial Word";
+                swmod;
+            } VALUE[15:0];
+        } MIC_WORD_H_REG @ 0x32;
     } REGS @ 0x0;
 
     /*
