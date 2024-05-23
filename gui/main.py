@@ -17,7 +17,7 @@ class WhiteLeds:
 
     def __init__(self, session):
         self.session = session
-        self.temperature = 5100.0
+        self.temperature = 4200.0
         self.value = 0.0
         self.delay = 0.0
 
