@@ -16,8 +16,8 @@ pub struct ColorPoint {
 // Cold, cool, hot
 const COLOR_MAP : [ColorPoint; 5]= [
     ColorPoint {val:    0.0, color: [1.0, 0.0, 0.0] },
-    ColorPoint {val: 2700.0, color: [1.0, 0.0, 0.0] },
-    ColorPoint {val: 4000.0, color: [0.0, 1.0, 0.0] },
+    ColorPoint {val: 1900.0, color: [1.0, 0.0, 0.0] },
+    ColorPoint {val: 3000.0, color: [0.0, 1.0, 0.0] },
     ColorPoint {val: 6500.0, color: [0.0, 0.0, 1.0] },
     ColorPoint {val: 9900.0, color: [0.0, 0.0, 1.0] },
 ];
