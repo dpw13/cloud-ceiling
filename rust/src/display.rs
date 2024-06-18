@@ -89,13 +89,15 @@ impl LedRegs {
 
     pub fn set_white_led(&self, cold: u8, cool: u8, hot: u8) -> () {
         let value = (cold as u32) << 8 | (cool as u32) | (hot as u32) << 16;
+        //print!("cold {cold} cool {cool} hot {hot} val 0x{value:06x}\n");
         unsafe { write_volatile(&mut (*self.regs).white_led, value) }
     }
 
     pub fn set_white_led_f32(&self, cold: f32, cool: f32, hot: f32) -> () {
-        let x = (cold * 255.0).round().clamp(0.0, 255.0) as u8;
-        let y = (cool * 255.0).round().clamp(0.0, 255.0) as u8;
-        let z = (hot * 255.0).round().clamp(0.0, 255.0) as u8;
+        const LED_MAX: f32 = 127.0; // MSB being ignored? TODO
+        let x = (cold * LED_MAX).round().clamp(0.0, LED_MAX) as u8;
+        let y = (cool * LED_MAX).round().clamp(0.0, LED_MAX) as u8;
+        let z = (hot * LED_MAX).round().clamp(0.0, LED_MAX) as u8;
         self.set_white_led(x, y, z)
     }
 }

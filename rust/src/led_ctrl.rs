@@ -42,12 +42,16 @@ pub async fn led_main(mut led_rx: Receiver<LedMessage>) {
                 // Perform the interpolation
                 //print!("alpha = {alpha}\n");
                 let new_color = COLOR_MAP[i].color.lerp(&COLOR_MAP[i+1].color, &alpha);
+                //print!("new_color: {new_color:?}\n");
+                let adj_value = value.powf(2.2);
                 let adj_color = [
-                    (new_color[0] * value),
-                    (new_color[1] * value),
-                    (new_color[2] * value),
+                    (new_color[0] * adj_value),
+                    (new_color[1] * adj_value),
+                    (new_color[2] * adj_value),
                 ];
-                
+                //print!("adj_color: {adj_color:?}\n");
+                // intensity
+
                 let start = Instant::now();
                 let duration = Duration::from_secs_f32(delay);
 
@@ -55,16 +59,16 @@ pub async fn led_main(mut led_rx: Receiver<LedMessage>) {
                     let alpha = start.elapsed().as_secs_f32()/duration.as_secs_f32();
                     let tmp_color = cur_color.lerp(&adj_color, &alpha);
                     regs.set_white_led_f32(
-                        tmp_color[0].powf(2.2), 
-                        tmp_color[1].powf(2.2), 
-                        tmp_color[2].powf(2.2));
+                        tmp_color[0].clamp(0.0, 1.0),
+                        tmp_color[1].clamp(0.0, 1.0),
+                        tmp_color[2].clamp(0.0, 1.0));
                     sleep(Duration::from_millis(10));
                 }
 
                 regs.set_white_led_f32(
-                    adj_color[0].powf(2.2),
-                    adj_color[1].powf(2.2), 
-                    adj_color[2].powf(2.2));
+                    adj_color[0].clamp(0.0, 1.0),
+                    adj_color[1].clamp(0.0, 1.0),
+                    adj_color[2].clamp(0.0, 1.0));
                 cur_color = adj_color;
             },
         }
