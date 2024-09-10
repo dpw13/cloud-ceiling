@@ -17,16 +17,16 @@ path = "src/movie.rs"
 
 [dependencies]
 base64 = "0.21.7"
-clap = { version = "4.4.18", features = ["derive"] }
-fastrand = "2.0.1"
-http-body-util = "0.1.0"
-hyper = { version = "1.1.0", features = ["full"] }
-hyper-util = { version = "0.1.2", features = ["full"] }
+clap = { version = "4.5.17", features = ["derive"] }
+fastrand = "2.1.1"
+http-body-util = "0.1.2"
+hyper = { version = "1.4.1", features = ["full"] }
+hyper-util = { version = "0.1.8", features = ["full"] }
 interpolation = "0.3.0"
 json = "0.12.4"
 memmap = "0.7.0"
 nix = { version = "0.27.1", features = ["ioctl"], default-features = false }
-num-traits = "0.2.17"
-num_enum = "0.7.2"
+num-traits = "0.2.19"
+num_enum = "0.7.3"
 rand = "0.8.5"
-tokio = { version = "1.35.1", features = ["net", "sync", "libc", "rt", "rt-multi-thread"] }
+tokio = { version = "1.40.0", features = ["net", "sync", "libc", "rt", "rt-multi-thread"] }
